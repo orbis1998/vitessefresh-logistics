@@ -14,16 +14,284 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      delivery_zones: {
+        Row: {
+          active: boolean
+          base_price: number
+          created_at: string
+          id: string
+          latitude: number
+          longitude: number
+          name: string
+        }
+        Insert: {
+          active?: boolean
+          base_price: number
+          created_at?: string
+          id?: string
+          latitude: number
+          longitude: number
+          name: string
+        }
+        Update: {
+          active?: boolean
+          base_price?: number
+          created_at?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          name?: string
+        }
+        Relationships: []
+      }
+      driver_locations: {
+        Row: {
+          driver_id: string
+          heading: number | null
+          latitude: number
+          longitude: number
+          speed: number | null
+          updated_at: string
+        }
+        Insert: {
+          driver_id: string
+          heading?: number | null
+          latitude: number
+          longitude: number
+          speed?: number | null
+          updated_at?: string
+        }
+        Update: {
+          driver_id?: string
+          heading?: number | null
+          latitude?: number
+          longitude?: number
+          speed?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      driver_profiles: {
+        Row: {
+          approved: boolean
+          created_at: string
+          id: string
+          rating: number | null
+          status: Database["public"]["Enums"]["driver_status"]
+          total_deliveries: number
+          updated_at: string
+          user_id: string
+          vehicle_plate: string | null
+          vehicle_type: string | null
+        }
+        Insert: {
+          approved?: boolean
+          created_at?: string
+          id?: string
+          rating?: number | null
+          status?: Database["public"]["Enums"]["driver_status"]
+          total_deliveries?: number
+          updated_at?: string
+          user_id: string
+          vehicle_plate?: string | null
+          vehicle_type?: string | null
+        }
+        Update: {
+          approved?: boolean
+          created_at?: string
+          id?: string
+          rating?: number | null
+          status?: Database["public"]["Enums"]["driver_status"]
+          total_deliveries?: number
+          updated_at?: string
+          user_id?: string
+          vehicle_plate?: string | null
+          vehicle_type?: string | null
+        }
+        Relationships: []
+      }
+      orders: {
+        Row: {
+          accepted_at: string | null
+          client_id: string
+          created_at: string
+          delivered_at: string | null
+          distance_km: number
+          driver_id: string | null
+          dropoff_address: string
+          dropoff_lat: number
+          dropoff_lng: number
+          id: string
+          notes: string | null
+          package_type: string | null
+          pickup_address: string
+          pickup_lat: number
+          pickup_lng: number
+          price: number
+          recipient_name: string | null
+          recipient_phone: string | null
+          status: Database["public"]["Enums"]["order_status"]
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          client_id: string
+          created_at?: string
+          delivered_at?: string | null
+          distance_km: number
+          driver_id?: string | null
+          dropoff_address: string
+          dropoff_lat: number
+          dropoff_lng: number
+          id?: string
+          notes?: string | null
+          package_type?: string | null
+          pickup_address: string
+          pickup_lat: number
+          pickup_lng: number
+          price: number
+          recipient_name?: string | null
+          recipient_phone?: string | null
+          status?: Database["public"]["Enums"]["order_status"]
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          client_id?: string
+          created_at?: string
+          delivered_at?: string | null
+          distance_km?: number
+          driver_id?: string | null
+          dropoff_address?: string
+          dropoff_lat?: number
+          dropoff_lng?: number
+          id?: string
+          notes?: string | null
+          package_type?: string | null
+          pickup_address?: string
+          pickup_lat?: number
+          pickup_lng?: number
+          price?: number
+          recipient_name?: string | null
+          recipient_phone?: string | null
+          status?: Database["public"]["Enums"]["order_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pricing_plans: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          display_order: number
+          features: Json
+          id: string
+          included_deliveries: number
+          max_distance_km: number | null
+          name: string
+          price: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          features?: Json
+          id?: string
+          included_deliveries?: number
+          max_distance_km?: number | null
+          name: string
+          price: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          features?: Json
+          id?: string
+          included_deliveries?: number
+          max_distance_km?: number | null
+          name?: string
+          price?: number
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "client" | "livreur" | "admin"
+      driver_status: "offline" | "available" | "busy"
+      order_status:
+        | "pending"
+        | "accepted"
+        | "picked_up"
+        | "in_transit"
+        | "delivered"
+        | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +418,17 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["client", "livreur", "admin"],
+      driver_status: ["offline", "available", "busy"],
+      order_status: [
+        "pending",
+        "accepted",
+        "picked_up",
+        "in_transit",
+        "delivered",
+        "cancelled",
+      ],
+    },
   },
 } as const
