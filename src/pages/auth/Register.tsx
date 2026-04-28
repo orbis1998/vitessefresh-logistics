@@ -75,7 +75,7 @@ const Register = () => {
             <Package className="w-12 h-12 text-primary-foreground" />
           </div>
           <h2 className="text-3xl font-poppins font-bold text-secondary-foreground mb-4">
-            Rejoignez VitesseFresh
+            Rejoignez Vita Express
           </h2>
           <p className="text-secondary-foreground/70 text-lg">
             Créez votre compte en quelques minutes et commencez à utiliser 
@@ -121,7 +121,7 @@ const Register = () => {
               <Package className="w-6 h-6 text-primary-foreground" />
             </div>
             <span className="font-poppins font-bold text-2xl">
-              Vitesse<span className="text-primary">Fresh</span>
+              Vita<span className="text-primary">Express</span>
             </span>
           </div>
 

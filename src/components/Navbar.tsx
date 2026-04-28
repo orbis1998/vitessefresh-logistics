@@ -28,7 +28,7 @@ const Navbar = () => {
               <Package className="w-5 h-5 lg:w-6 lg:h-6 text-primary-foreground" />
             </div>
             <span className="font-poppins font-bold text-xl lg:text-2xl text-foreground">
-              Vitesse<span className="text-primary">Fresh</span>
+              Vita<span className="text-primary">Express</span>
             </span>
           </Link>
 

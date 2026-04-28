@@ -61,7 +61,7 @@ const Login = () => {
               <Package className="w-6 h-6 text-primary-foreground" />
             </div>
             <span className="font-poppins font-bold text-2xl">
-              Vitesse<span className="text-primary">Fresh</span>
+              Vita<span className="text-primary">Express</span>
             </span>
           </div>
 
@@ -69,7 +69,7 @@ const Login = () => {
           <div className="mb-8">
             <h1 className="text-3xl font-poppins font-bold mb-2">Connexion</h1>
             <p className="text-muted-foreground">
-              Accédez à votre espace VitesseFresh
+              Accédez à votre espace Vita Express
             </p>
           </div>
 
@@ -160,7 +160,7 @@ const Login = () => {
             Livraison rapide et fiable
           </h2>
           <p className="text-secondary-foreground/70 text-lg">
-            Rejoignez VitesseFresh et profitez d'un service de livraison premium 
+            Rejoignez Vita Express et profitez d'un service de livraison premium 
             à Kinshasa. Suivi en temps réel, tarifs transparents.
           </p>
         </motion.div>

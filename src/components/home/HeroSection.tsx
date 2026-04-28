@@ -11,7 +11,7 @@ const HeroSection = () => {
       <div className="absolute inset-0 z-0">
         <img
           src={heroImage}
-          alt="VitesseFresh Livraison"
+          alt="Vita Express Livraison"
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-secondary/95 via-secondary/80 to-secondary/40" />
@@ -68,7 +68,7 @@ const HeroSection = () => {
 
             {/* Description */}
             <p className="text-lg sm:text-xl text-secondary-foreground/80 max-w-lg leading-relaxed">
-              VitesseFresh révolutionne la livraison à Kinshasa. Suivez vos colis en 
+              Vita Express révolutionne la livraison à Kinshasa. Suivez vos colis en 
               temps réel, profitez de tarifs transparents et d'un service premium.
             </p>
 

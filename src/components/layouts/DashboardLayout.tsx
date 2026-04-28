@@ -74,7 +74,7 @@ const DashboardLayout = ({ children, title, subtitle }: DashboardLayoutProps) =>
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
             <Package className="w-4 h-4 text-primary-foreground" />
           </div>
-          <span className="font-poppins font-bold">VitesseFresh</span>
+          <span className="font-poppins font-bold">Vita Express</span>
         </div>
       </header>
 
@@ -99,7 +99,7 @@ const DashboardLayout = ({ children, title, subtitle }: DashboardLayoutProps) =>
                 <Package className="w-5 h-5 text-primary-foreground" />
               </div>
               <span className="font-poppins font-bold text-xl">
-                Vitesse<span className="text-primary">Fresh</span>
+                Vita<span className="text-primary">Express</span>
               </span>
             </Link>
             <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 hover:bg-muted rounded-lg">

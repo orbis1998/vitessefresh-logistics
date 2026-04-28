@@ -53,7 +53,7 @@ const FeaturesSection = () => {
             <span className="text-primary">Kinshasa</span>
           </h2>
           <p className="text-lg text-muted-foreground">
-            VitesseFresh combine technologie moderne et service de proximité pour 
+            Vita Express combine technologie moderne et service de proximité pour 
             vous offrir une expérience de livraison sans pareille.
           </p>
         </motion.div>
