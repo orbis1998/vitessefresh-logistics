@@ -30,11 +30,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchRoles = async (userId: string) => {
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
-    setRoles((data ?? []).map((r) => r.role as AppRole));
+    for (let i = 0; i < 4; i++) {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId);
+      if (!error) {
+        setRoles((data ?? []).map((r) => r.role as AppRole));
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 800));
+    }
   };
 
   useEffect(() => {
