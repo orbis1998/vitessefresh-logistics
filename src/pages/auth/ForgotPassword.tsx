@@ -50,7 +50,7 @@ const ForgotPassword = () => {
             <Package className="w-6 h-6 text-primary-foreground" />
           </div>
           <span className="font-poppins font-bold text-2xl">
-            Vitesse<span className="text-primary">Fresh</span>
+            Vita<span className="text-primary">Express</span>
           </span>
         </div>
 

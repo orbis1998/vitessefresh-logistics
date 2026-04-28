@@ -12,7 +12,7 @@
 
 @layer base {
   :root {
-    /* VitesseFresh Brand Colors - Yellow, Black, White */
+    /* Vita Express Brand Colors - Yellow, Black, White */
     --background: 0 0% 100%;
     --foreground: 0 0% 8%;
 
@@ -46,7 +46,7 @@
 
     --radius: 0.75rem;
 
-    /* Custom VitesseFresh tokens */
+    /* Custom Vita Express tokens */
     --brand-yellow: 45 100% 50%;
     --brand-yellow-light: 45 100% 60%;
     --brand-yellow-dark: 45 100% 40%;

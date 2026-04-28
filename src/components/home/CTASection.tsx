@@ -33,7 +33,7 @@ const CTASection = () => {
 
             <p className="text-lg text-secondary-foreground/70 max-w-lg">
               Rejoignez des centaines d'entreprises et particuliers qui font confiance 
-              à VitesseFresh pour leurs livraisons quotidiennes à Kinshasa.
+              à Vita Express pour leurs livraisons quotidiennes à Kinshasa.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">

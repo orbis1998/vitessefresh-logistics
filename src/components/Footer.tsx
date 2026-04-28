@@ -15,7 +15,7 @@ const Footer = () => {
                 <Package className="w-5 h-5 text-primary-foreground" />
               </div>
               <span className="font-poppins font-bold text-xl text-secondary-foreground">
-                Vitesse<span className="text-primary">Fresh</span>
+                Vita<span className="text-primary">Express</span>
               </span>
             </Link>
             <p className="text-secondary-foreground/70 text-sm leading-relaxed">
@@ -123,7 +123,7 @@ const Footer = () => {
               <li className="flex items-center gap-3">
                 <Mail className="w-5 h-5 text-primary shrink-0" />
                 <span className="text-secondary-foreground/70 text-sm">
-                  contact@vitessefresh.cd
+                  contact@vita-express.cd
                 </span>
               </li>
             </ul>
@@ -134,10 +134,11 @@ const Footer = () => {
         <div className="mt-12 pt-8 border-t border-secondary-foreground/10">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-secondary-foreground/50 text-sm">
-              © {currentYear} VitesseFresh. Tous droits réservés.
+              © {currentYear} Vita Express. Tous droits réservés.
             </p>
-            <p className="text-secondary-foreground/50 text-sm">
-              Fait avec ❤️ à Kinshasa
+            <p className="text-secondary-foreground/50 text-sm flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-primary" />
+              Conçu à Kinshasa, RDC
             </p>
           </div>
         </div>

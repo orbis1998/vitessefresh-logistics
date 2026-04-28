@@ -15,7 +15,7 @@ export function haversineKm(
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// Tarification VitesseFresh : forfait base 1500 FC + 800 FC/km
+// Tarification Vita Express : forfait base 1500 FC + 800 FC/km
 export function computePriceFC(distanceKm: number, baseZonePrice = 1500): number {
   const perKm = 800;
   const minPrice = 2000;
