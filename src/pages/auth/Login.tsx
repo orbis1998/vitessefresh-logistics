@@ -25,12 +25,19 @@ const Login = () => {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
       return;
     }
-    // fetch role
-    const { data: roleRows } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", data.user!.id);
-    const roles = (roleRows ?? []).map((r) => r.role as string);
+    // fetch role with retry (DB might be cold-starting)
+    let roles: string[] = [];
+    for (let i = 0; i < 4; i++) {
+      const { data: roleRows, error: roleErr } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", data.user!.id);
+      if (!roleErr && roleRows) {
+        roles = roleRows.map((r) => r.role as string);
+        break;
+      }
+      await new Promise((r) => setTimeout(r, 800));
+    }
     toast({ title: "Connexion réussie", description: "Bienvenue !" });
     if (roles.includes("admin")) navigate("/admin");
     else if (roles.includes("livreur")) navigate("/livreur");
