@@ -136,8 +136,9 @@ const Footer = () => {
             <p className="text-secondary-foreground/50 text-sm">
               © {currentYear} Vita Express. Tous droits réservés.
             </p>
-            <p className="text-secondary-foreground/50 text-sm">
-              Fait avec ❤️ à Kinshasa
+            <p className="text-secondary-foreground/50 text-sm flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-primary" />
+              Conçu à Kinshasa, RDC
             </p>
           </div>
         </div>
