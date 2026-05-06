@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -15,30 +16,33 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { refreshRoles } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     const { error, data } = await supabase.auth.signInWithPassword({ email, password });
-    setIsLoading(false);
+
     if (error) {
+      setIsLoading(false);
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
       return;
     }
-    // fetch role with retry (DB might be cold-starting)
+
     let roles: string[] = [];
     for (let i = 0; i < 4; i++) {
-      const { data: roleRows, error: roleErr } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", data.user!.id);
+      const { data: roleRows, error: roleErr } = await supabase.rpc("get_my_roles");
       if (!roleErr && roleRows) {
-        roles = roleRows.map((r) => r.role as string);
+        roles = roleRows.map((r: { role: string }) => r.role);
         break;
       }
-      await new Promise((r) => setTimeout(r, 800));
+      await new Promise((r) => setTimeout(r, 500));
     }
+
+    await refreshRoles();
+    setIsLoading(false);
     toast({ title: "Connexion réussie", description: "Bienvenue !" });
+
     if (roles.includes("admin")) navigate("/admin");
     else if (roles.includes("livreur")) navigate("/livreur");
     else navigate("/dashboard");
