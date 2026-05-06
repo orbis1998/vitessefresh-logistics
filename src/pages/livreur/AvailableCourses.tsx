@@ -14,7 +14,8 @@ const AvailableCourses = () => {
     const { data } = await supabase
       .from("orders")
       .select("*")
-      .eq("status", "pending")
+      .eq("status", "accepted")
+      .is("driver_id", null)
       .order("created_at", { ascending: true });
     setOrders(data ?? []);
     setLoading(false);
