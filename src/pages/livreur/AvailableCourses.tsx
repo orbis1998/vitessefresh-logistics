@@ -4,31 +4,35 @@ import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 const AvailableCourses = () => {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
+    if (!user) return;
     const { data } = await supabase
       .from("orders")
       .select("*")
       .eq("status", "accepted")
-      .is("driver_id", null)
+      .eq("driver_id", user.id)
       .order("created_at", { ascending: true });
     setOrders(data ?? []);
     setLoading(false);
   };
 
   useEffect(() => {
+    if (!user) return;
     load();
     const ch = supabase
       .channel("accepted-orders")
       .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => load())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, []);
+  }, [user]);
 
   return (
     <DashboardLayout title="Courses attribuées" subtitle="Les missions validées par l'administrateur apparaissent ici">
