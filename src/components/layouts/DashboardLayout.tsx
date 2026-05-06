@@ -7,7 +7,6 @@ import {
   Plus,
   Clock,
   MapPin,
-  CreditCard,
   User,
   LogOut,
   Menu,
@@ -31,7 +30,6 @@ const menuByRole: Record<AppRole, { icon: any; label: string; href: string }[]> 
     { icon: Plus, label: "Nouvelle commande", href: "/dashboard/order" },
     { icon: Clock, label: "Mes commandes", href: "/dashboard/orders" },
     { icon: MapPin, label: "Suivi en direct", href: "/dashboard/tracking" },
-    { icon: CreditCard, label: "Forfaits", href: "/dashboard/plans" },
   ],
   livreur: [
     { icon: Home, label: "Tableau de bord", href: "/livreur" },
