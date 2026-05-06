@@ -76,6 +76,7 @@ const AdminOrders = () => {
                 <th className="text-left p-4">Distance</th>
                 <th className="text-left p-4">Prix</th>
                 <th className="text-left p-4">Statut</th>
+                <th className="text-left p-4">Affectation</th>
               </tr>
             </thead>
             <tbody>
