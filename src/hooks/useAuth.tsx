@@ -29,29 +29,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchRoles = async (userId: string) => {
+  const fetchRoles = async () => {
     for (let i = 0; i < 4; i++) {
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userId);
+      const { data, error } = await supabase.rpc("get_my_roles");
+
       if (!error) {
-        setRoles((data ?? []).map((r) => r.role as AppRole));
+        setRoles((data ?? []).map((r: { role: AppRole }) => r.role));
         return;
       }
+
       await new Promise((r) => setTimeout(r, 800));
     }
+
+    setRoles([]);
   };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, newSession) => {
+        setLoading(true);
         setSession(newSession);
         setUser(newSession?.user ?? null);
+
         if (newSession?.user) {
-          setTimeout(() => fetchRoles(newSession.user.id), 0);
+          setTimeout(() => {
+            fetchRoles().finally(() => setLoading(false));
+          }, 0);
         } else {
           setRoles([]);
+          setLoading(false);
         }
       }
     );
@@ -60,7 +66,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchRoles(session.user.id).finally(() => setLoading(false));
+        fetchRoles().finally(() => setLoading(false));
       } else {
         setLoading(false);
       }
@@ -85,7 +91,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         : null;
 
   const refreshRoles = async () => {
-    if (user) await fetchRoles(user.id);
+    if (user) await fetchRoles();
   };
 
   return (
