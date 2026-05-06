@@ -7,7 +7,6 @@ import {
   Plus,
   Clock,
   MapPin,
-  CreditCard,
   User,
   LogOut,
   Menu,
