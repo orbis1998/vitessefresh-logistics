@@ -4,7 +4,7 @@ import { Loader2, Package, Phone } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import MapView, { MapMarker } from "@/components/MapView";
+import MapView from "@/components/MapView";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -84,11 +84,11 @@ const Tracking = () => {
     return () => { supabase.removeChannel(ch); };
   }, [order?.driver_id]);
 
-  const markers: MapMarker[] = order
+  const markers = order
     ? [
-        { id: "p", lat: Number(order.pickup_lat), lng: Number(order.pickup_lng), color: "hsl(142 76% 36%)", label: "Ramassage" },
-        { id: "d", lat: Number(order.dropoff_lat), lng: Number(order.dropoff_lng), color: "hsl(0 84% 60%)", label: "Livraison" },
-        ...(driverLoc ? [{ id: "driver", lat: driverLoc.lat, lng: driverLoc.lng, color: "hsl(45 100% 51%)", label: "Livreur" }] : []),
+        { coordinates: [Number(order.pickup_lng), Number(order.pickup_lat)] as [number, number], type: "pickup" as const, popup: "Ramassage" },
+        { coordinates: [Number(order.dropoff_lng), Number(order.dropoff_lat)] as [number, number], type: "delivery" as const, popup: "Livraison" },
+        ...(driverLoc ? [{ coordinates: [driverLoc.lng, driverLoc.lat] as [number, number], type: "driver" as const, popup: "Livreur" }] : []),
       ]
     : [];
 
@@ -137,7 +137,7 @@ const Tracking = () => {
                 <p className="text-xl font-bold text-primary">{Number(order.price).toLocaleString()} FC</p>
               </div>
             </div>
-            <MapView markers={markers} fitBounds className="w-full h-[500px]" />
+            <MapView markers={markers} className="w-full h-[500px]" />
             {order.driver_id && !driverLoc && (
               <p className="text-sm text-muted-foreground text-center">En attente de la position du livreur...</p>
             )}

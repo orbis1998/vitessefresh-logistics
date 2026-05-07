@@ -23,12 +23,9 @@ const Navbar = () => {
       <div className="container-custom">
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 lg:w-12 lg:h-12 bg-primary rounded-xl flex items-center justify-center shadow-yellow">
-              <Package className="w-5 h-5 lg:w-6 lg:h-6 text-primary-foreground" />
-            </div>
+          <Link to="/" className="flex items-center">
             <span className="font-poppins font-bold text-xl lg:text-2xl text-foreground">
-              Vita<span className="text-primary">Express</span>
+              Vita <span className="text-primary">Express</span>
             </span>
           </Link>
 

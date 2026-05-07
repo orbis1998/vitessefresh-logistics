@@ -6,7 +6,6 @@ import {
   Clock,
   ShieldCheck,
   Package,
-  Sparkles,
   Navigation,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -44,9 +43,8 @@ const HeroSection = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
-              className="inline-flex items-center gap-2 bg-primary/15 backdrop-blur-md px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border border-primary/30"
+              className="inline-flex items-center bg-primary/15 backdrop-blur-md px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border border-primary/30"
             >
-              <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
               <span className="text-primary font-medium text-xs sm:text-sm">
                 Livraison premium à Kinshasa
               </span>
@@ -198,9 +196,8 @@ const HeroSection = () => {
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.8 }}
-                className="absolute -top-4 -right-4 bg-primary text-primary-foreground px-4 py-2 rounded-full font-semibold shadow-yellow-lg flex items-center gap-2"
+                className="absolute -top-4 -right-4 bg-primary text-primary-foreground px-4 py-2 rounded-full font-semibold shadow-yellow-lg"
               >
-                <Sparkles className="w-4 h-4" />
                 Nouveau service
               </motion.div>
             </div>

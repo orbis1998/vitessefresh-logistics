@@ -3,7 +3,7 @@ import { Loader2, Navigation, Phone } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import MapView, { MapMarker } from "@/components/MapView";
+import MapView from "@/components/MapView";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -118,10 +118,10 @@ const MyDeliveries = () => {
               ) : (
                 <div className="space-y-4">
                   {active.map((o) => {
-                    const markers: MapMarker[] = [
-                      { id: "p", lat: Number(o.pickup_lat), lng: Number(o.pickup_lng), color: "hsl(142 76% 36%)", label: "Ramassage" },
-                      { id: "d", lat: Number(o.dropoff_lat), lng: Number(o.dropoff_lng), color: "hsl(0 84% 60%)", label: "Livraison" },
-                      ...(currentPos ? [{ id: "me", lat: currentPos.lat, lng: currentPos.lng, color: "hsl(45 100% 51%)", label: "Moi" }] : []),
+                    const markers = [
+                      { coordinates: [Number(o.pickup_lng), Number(o.pickup_lat)] as [number, number], type: "pickup" as const, popup: "Ramassage" },
+                      { coordinates: [Number(o.dropoff_lng), Number(o.dropoff_lat)] as [number, number], type: "delivery" as const, popup: "Livraison" },
+                      ...(currentPos ? [{ coordinates: [currentPos.lng, currentPos.lat] as [number, number], type: "driver" as const, popup: "Moi" }] : []),
                     ];
                     return (
                       <div key={o.id} className="bg-background rounded-2xl border border-border p-5 space-y-4">
@@ -141,7 +141,7 @@ const MyDeliveries = () => {
                             <p className="text-lg font-bold text-primary">{Number(o.price).toLocaleString()} FC</p>
                           </div>
                         </div>
-                        <MapView markers={markers} fitBounds className="w-full h-64" />
+                        <MapView markers={markers} className="w-full h-64" />
                         {NEXT_STATUS[o.status] && (
                           <Button className="w-full" onClick={() => advanceStatus(o)}>
                             {NEXT_STATUS[o.status].label}

@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
@@ -10,7 +11,6 @@ import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import Dashboard from "./pages/dashboard/Dashboard";
-import NewOrder from "./pages/dashboard/NewOrder";
 import Orders from "./pages/dashboard/Orders";
 import Tracking from "./pages/dashboard/Tracking";
 import DriverDashboard from "./pages/livreur/DriverDashboard";
@@ -20,26 +20,35 @@ import AdminOverview from "./pages/admin/AdminOverview";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminDrivers from "./pages/admin/AdminDrivers";
 import AdminOrders from "./pages/admin/AdminOrders";
+import Services from "./pages/Services";
+import Forfaits from "./pages/Forfaits";
+import TrackingPage from "./pages/Tracking";
+import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
+  <HelmetProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AuthProvider>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/services" element={<Services />} />
+            <Route path="/forfaits" element={<Forfaits />} />
+            <Route path="/tracking" element={<TrackingPage />} />
+            <Route path="/contact" element={<Contact />} />
             <Route path="/auth/login" element={<Login />} />
             <Route path="/auth/register" element={<Register />} />
             <Route path="/auth/forgot-password" element={<ForgotPassword />} />
 
             {/* Client */}
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/dashboard/order" element={<ProtectedRoute><NewOrder /></ProtectedRoute>} />
+            <Route path="/dashboard/order" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
             <Route path="/dashboard/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
             <Route path="/dashboard/tracking" element={<ProtectedRoute><Tracking /></ProtectedRoute>} />
 
@@ -60,6 +69,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+  </HelmetProvider>
 );
 
 export default App;

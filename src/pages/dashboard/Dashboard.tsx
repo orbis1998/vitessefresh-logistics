@@ -39,7 +39,7 @@ const Dashboard = () => {
     <DashboardLayout title="Tableau de bord" subtitle="Vue d'ensemble de vos livraisons">
       <div className="space-y-8">
         <div className="lg:hidden">
-          <Link to="/dashboard/order">
+          <Link to="/dashboard/orders">
             <Button size="lg" className="w-full">
               <Plus className="w-5 h-5 mr-2" />
               Nouvelle commande
