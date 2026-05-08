@@ -68,12 +68,7 @@ const DashboardLayout = ({ children, title, subtitle }: DashboardLayoutProps) =>
         <button onClick={() => setSidebarOpen(true)} className="p-2 hover:bg-muted rounded-lg">
           <Menu className="w-6 h-6" />
         </button>
-        <div className="flex items-center gap-2 ml-4">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <Package className="w-4 h-4 text-primary-foreground" />
-          </div>
-          <span className="font-poppins font-bold">Vita Express</span>
-        </div>
+        <span className="ml-4 font-poppins font-semibold text-sm">{title}</span>
       </header>
 
       {sidebarOpen && (
@@ -92,14 +87,6 @@ const DashboardLayout = ({ children, title, subtitle }: DashboardLayoutProps) =>
       >
         <div className="flex flex-col h-full">
           <div className="h-16 lg:h-20 flex items-center justify-between px-6 border-b border-border">
-            <Link to="/" className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-yellow">
-                <Package className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <span className="font-poppins font-bold text-xl">
-                Vita<span className="text-primary">Express</span>
-              </span>
-            </Link>
             <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 hover:bg-muted rounded-lg">
               <X className="w-5 h-5" />
             </button>
