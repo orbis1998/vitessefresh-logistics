@@ -40,9 +40,15 @@ const Dashboard = () => {
       <div className="space-y-8">
         <div className="lg:hidden">
           <Link to="/dashboard/orders">
-            <Button size="lg" className="w-full">
+            <Button size="lg" className="w-full mb-3">
               <Plus className="w-5 h-5 mr-2" />
               Nouvelle commande
+            </Button>
+          </Link>
+          <Link to="/dashboard/orders-list">
+            <Button variant="outline" size="lg" className="w-full">
+              <Package className="w-5 h-5 mr-2" />
+              Mes commandes
             </Button>
           </Link>
         </div>

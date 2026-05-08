@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Loader2, Package, Phone, Navigation, RefreshCw, AlertCircle, CheckCircle2, ArrowRight } from "lucide-react";
+import { Loader2, Package, Phone, Navigation, RefreshCw, AlertCircle, CheckCircle2, ArrowRight, Clock } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import MapView from "@/components/MapView";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useMapboxToken } from "@/hooks/useMapboxToken";
 
 const STATUS_META: Record<string, { label: string; color: string }> = {
   pending: { label: "En attente d'un livreur", color: "text-yellow-400" },
@@ -27,6 +28,10 @@ const Tracking = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [gpsActive, setGpsActive] = useState<boolean | null>(null);
+  const [route, setRoute] = useState<Array<[number, number]> | null>(null);
+  const [estimatedTime, setEstimatedTime] = useState<number | null>(null);
+  const [calculatingRoute, setCalculatingRoute] = useState(false);
+  const { token } = useMapboxToken();
 
   // load active orders list
   useEffect(() => {
@@ -93,6 +98,37 @@ const Tracking = () => {
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [order?.driver_id]);
+
+  // calculate route when driver location or order changes
+  useEffect(() => {
+    if (!driverLoc || !order || !token) return;
+
+    const calculateRoute = async () => {
+      setCalculatingRoute(true);
+      try {
+        const dropoff = [Number(order.dropoff_lng), Number(order.dropoff_lat)] as [number, number];
+        const driver = [driverLoc.lng, driverLoc.lat] as [number, number];
+
+        const response = await fetch(
+          `https://api.mapbox.com/directions/v5/mapbox/driving/${driver[0]},${driver[1]};${dropoff[0]},${dropoff[1]}?overview=full&geometries=geojson&access_token=${token}`
+        );
+        const data = await response.json();
+
+        if (data.routes && data.routes[0]) {
+          const routeData = data.routes[0];
+          const coordinates = routeData.geometry.coordinates as [number, number][];
+          setRoute(coordinates);
+          setEstimatedTime(routeData.duration); // duration in seconds
+        }
+      } catch (error) {
+        console.error("Error calculating route:", error);
+      } finally {
+        setCalculatingRoute(false);
+      }
+    };
+
+    calculateRoute();
+  }, [driverLoc, order, token]);
 
   const refreshDriverLoc = async () => {
     if (!order?.driver_id) return;
@@ -207,13 +243,25 @@ const Tracking = () => {
 
             {/* Map */}
             <div className="bg-card border border-border rounded-2xl overflow-hidden h-[400px] relative">
-              <MapView markers={markers} className="absolute inset-0" readonly={true} center={markers[0]?.coordinates} />
+              <MapView markers={markers} route={route} estimatedTime={estimatedTime} className="absolute inset-0" readonly={true} center={markers[0]?.coordinates} />
               {!order.driver_id && (
                 <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center">
                   <div className="text-center space-y-2">
                     <Navigation className="w-8 h-8 text-primary mx-auto" />
                     <p className="text-sm font-medium">En attente d'un livreur disponible...</p>
                   </div>
+                </div>
+              )}
+              {estimatedTime && (
+                <div className="absolute top-3 left-3 bg-black/90 backdrop-blur-xl border border-border rounded-xl px-4 py-2 flex items-center gap-2 z-10">
+                  <Clock className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium">
+                    {estimatedTime < 60
+                      ? `${Math.round(estimatedTime)} sec`
+                      : estimatedTime < 3600
+                      ? `${Math.round(estimatedTime / 60)} min`
+                      : `${Math.round(estimatedTime / 3600)} h ${Math.round((estimatedTime % 3600) / 60)} min`}
+                  </span>
                 </div>
               )}
             </div>
