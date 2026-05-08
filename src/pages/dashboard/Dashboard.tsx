@@ -67,7 +67,7 @@ const Dashboard = () => {
               <span className="text-primary font-medium inline-flex items-center gap-1 group-hover:gap-2 transition-all">Commander <ArrowRight className="w-4 h-4" /></span>
             </div>
           </Link>
-          <Link to="/dashboard/orders" className="group">
+          <Link to="/dashboard/orders-list" className="group">
             <div className="bg-background rounded-2xl border border-border p-6 hover:border-primary/30 hover:shadow-lg transition-all h-full">
               <h3 className="font-poppins font-semibold mb-2">Mes commandes</h3>
               <p className="text-sm text-muted-foreground mb-4">Historique complet de vos livraisons</p>

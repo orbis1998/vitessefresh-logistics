@@ -200,7 +200,7 @@ const MyDeliveries = () => {
 
             {/* Map */}
             <div className="bg-card border border-border rounded-2xl overflow-hidden h-[320px] relative">
-              <MapView markers={markers} className="absolute inset-0" />
+              <MapView markers={markers} className="absolute inset-0" readonly={true} center={markers[0]?.coordinates} />
               {!sharing && (
                 <button
                   onClick={startSharing}

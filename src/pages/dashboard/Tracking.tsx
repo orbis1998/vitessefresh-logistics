@@ -207,7 +207,7 @@ const Tracking = () => {
 
             {/* Map */}
             <div className="bg-card border border-border rounded-2xl overflow-hidden h-[400px] relative">
-              <MapView markers={markers} className="absolute inset-0" />
+              <MapView markers={markers} className="absolute inset-0" readonly={true} center={markers[0]?.coordinates} />
               {!order.driver_id && (
                 <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center">
                   <div className="text-center space-y-2">
