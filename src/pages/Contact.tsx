@@ -110,21 +110,14 @@ const Contact = () => {
       <Navbar />
       
       {/* Hero Section */}
-      <section className="pt-32 pb-16 bg-gradient-to-b from-primary/5 to-background">
-        <div className="container-custom">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center max-w-4xl mx-auto"
-          >
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-poppins font-bold mb-6">
-              Contactez<span className="text-primary">-nous</span>
-            </h1>
-            <p className="text-lg sm:text-xl text-muted-foreground leading-relaxed">
-              Notre équipe est à votre disposition pour répondre à toutes vos questions. 
-              Trouvez le contact adapté à votre besoin ou envoyez-nous un message.
-            </p>
-          </motion.div>
+      <section className="pt-32 pb-12">
+        <div className="container-custom max-w-3xl">
+          <h1 className="text-4xl sm:text-5xl font-heading font-bold">
+            Une question, un numéro.
+          </h1>
+          <p className="mt-5 text-lg text-muted-foreground leading-relaxed">
+            Support courses, commercial, ou technique. Écrivez, on répond.
+          </p>
         </div>
       </section>
 

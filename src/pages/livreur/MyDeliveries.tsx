@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Loader2, Navigation, Phone, ChevronLeft, ChevronRight,
   Package, CheckCircle2, Truck, CircleDot, Circle
@@ -28,7 +29,6 @@ const STEPS = [
 const NEXT_STATUS: Record<string, { next: string; label: string }> = {
   accepted:   { next: "picked_up",  label: "Colis récupéré ✓" },
   picked_up:  { next: "in_transit", label: "Démarrer livraison →" },
-  in_transit: { next: "delivered",  label: "Marquer livrée ✓" },
 };
 
 /* ───────── Component ───────── */
@@ -275,8 +275,8 @@ const MyDeliveries = () => {
       </div>
 
       {/* ── Sticky bottom action bar ── */}
-      {current && NEXT_STATUS[current.status] && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-black/90 backdrop-blur-xl border-t border-border p-4 safe-area-pb">
+      {current && (NEXT_STATUS[current.status] || current.status === "in_transit") && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-black/90 backdrop-blur-xl border-t border-white/10 p-4 safe-area-pb">
           <div className="max-w-3xl mx-auto flex items-center gap-3">
             {current.recipient_phone && (
               <a
@@ -286,13 +286,19 @@ const MyDeliveries = () => {
                 <Phone className="w-5 h-5" />
               </a>
             )}
-            <Button
-              size="lg"
-              className="flex-1 font-bold tracking-wide"
-              onClick={() => advanceStatus(current)}
-            >
-              {NEXT_STATUS[current.status].label}
-            </Button>
+            {current.status === "in_transit" ? (
+              <Button asChild size="lg" className="flex-1 font-bold tracking-wide">
+                <Link to="/livreur">Saisir l’OTP destinataire</Link>
+              </Button>
+            ) : (
+              <Button
+                size="lg"
+                className="flex-1 font-bold tracking-wide"
+                onClick={() => advanceStatus(current)}
+              >
+                {NEXT_STATUS[current.status].label}
+              </Button>
+            )}
           </div>
         </div>
       )}

@@ -122,8 +122,16 @@ export type Database = {
           dropoff_lat: number
           dropoff_lng: number
           id: string
+          kpay_refid: string | null
+          kpay_status: string | null
           notes: string | null
+          organization_id: string | null
           package_type: string | null
+          delivery_otp: string | null
+          payment_method: string | null
+          payment_status: string | null
+          payment_phone: string | null
+          payment_reference: string | null
           pickup_address: string
           pickup_lat: number
           pickup_lng: number
@@ -138,13 +146,21 @@ export type Database = {
           client_id: string
           created_at?: string
           delivered_at?: string | null
+          delivery_otp?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          payment_phone?: string | null
+          payment_reference?: string | null
           distance_km: number
           driver_id?: string | null
           dropoff_address: string
           dropoff_lat: number
           dropoff_lng: number
           id?: string
+          kpay_refid?: string | null
+          kpay_status?: string | null
           notes?: string | null
+          organization_id?: string | null
           package_type?: string | null
           pickup_address: string
           pickup_lat: number
@@ -160,13 +176,21 @@ export type Database = {
           client_id?: string
           created_at?: string
           delivered_at?: string | null
+          delivery_otp?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          payment_phone?: string | null
+          payment_reference?: string | null
           distance_km?: number
           driver_id?: string | null
           dropoff_address?: string
           dropoff_lat?: number
           dropoff_lng?: number
           id?: string
+          kpay_refid?: string | null
+          kpay_status?: string | null
           notes?: string | null
+          organization_id?: string | null
           package_type?: string | null
           pickup_address?: string
           pickup_lat?: number
@@ -269,11 +293,268 @@ export type Database = {
         }
         Relationships: []
       }
+      organizations: {
+        Row: {
+          active: boolean
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          id: string
+          name: string
+          plan_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          plan_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          plan_id?: string | null
+        }
+        Relationships: []
+      }
+      organization_members: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          created_at: string
+          credits_remaining: number
+          ends_at: string | null
+          id: string
+          organization_id: string | null
+          plan_id: string
+          starts_at: string
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          credits_remaining?: number
+          ends_at?: string | null
+          id?: string
+          organization_id?: string | null
+          plan_id: string
+          starts_at?: string
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          credits_remaining?: number
+          ends_at?: string | null
+          id?: string
+          organization_id?: string | null
+          plan_id?: string
+          starts_at?: string
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      ledger_entries: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          kind: string
+          note: string | null
+          order_id: string | null
+          organization_id: string | null
+          subscription_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          id?: string
+          kind: string
+          note?: string | null
+          order_id?: string | null
+          organization_id?: string | null
+          subscription_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          kind?: string
+          note?: string | null
+          order_id?: string | null
+          organization_id?: string | null
+          subscription_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      support_threads: {
+        Row: {
+          assigned_to: string | null
+          client_id: string | null
+          created_at: string
+          id: string
+          order_id: string | null
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          status?: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      support_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          sender_id: string | null
+          thread_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          sender_id?: string | null
+          thread_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          sender_id?: string | null
+          thread_id?: string
+        }
+        Relationships: []
+      }
+      whatsapp_messages: {
+        Row: {
+          body: string
+          created_at: string
+          error: string | null
+          id: string
+          kind: string
+          order_id: string | null
+          phone: string
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind?: string
+          order_id?: string | null
+          phone: string
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind?: string
+          order_id?: string | null
+          phone?: string
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
+      audit_logs: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          entity: string | null
+          entity_id: string | null
+          id: string
+          meta: Json
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          entity?: string | null
+          entity_id?: string | null
+          id?: string
+          meta?: Json
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          entity?: string | null
+          entity_id?: string | null
+          id?: string
+          meta?: Json
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      is_ops: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
+      is_finance_staff: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       get_my_roles: {
         Args: never
         Returns: {
@@ -287,9 +568,26 @@ export type Database = {
         }
         Returns: boolean
       }
+      verify_delivery_otp: {
+        Args: {
+          p_order_id: string
+          p_otp: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
-      app_role: "client" | "livreur" | "admin"
+      app_role:
+        | "client"
+        | "livreur"
+        | "admin"
+        | "gestionnaire"
+        | "call_center"
+        | "suivi"
+        | "support"
+        | "comptable"
+        | "finance"
+        | "entreprise"
       driver_status: "offline" | "available" | "busy"
       order_status:
         | "pending"
@@ -425,7 +723,18 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["client", "livreur", "admin"],
+      app_role: [
+        "client",
+        "livreur",
+        "admin",
+        "gestionnaire",
+        "call_center",
+        "suivi",
+        "support",
+        "comptable",
+        "finance",
+        "entreprise",
+      ],
       driver_status: ["offline", "available", "busy"],
       order_status: [
         "pending",

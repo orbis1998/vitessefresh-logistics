@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   MapPin, Package, User, Phone, Calculator, ArrowRight, Loader2,
-  CheckCircle2, Crosshair, Search, Navigation
+  CheckCircle2, Crosshair, Search, Navigation, Banknote, Smartphone, ShieldCheck
 } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useMapboxToken } from "@/hooks/useMapboxToken";
 import { haversineKm, computePriceFC } from "@/lib/distance";
 import { useToast } from "@/hooks/use-toast";
+import { generateDeliveryOtp, detectMobileMoneyOperator, normalizeDrcPhone } from "@/lib/flexpay";
 
 interface Location {
   address: string;
@@ -78,6 +79,8 @@ const Orders = () => {
   const [notes, setNotes] = useState("");
   const [recipientName, setRecipientName] = useState("");
   const [recipientPhone, setRecipientPhone] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "kpay">("cash");
+  const [paymentPhone, setPaymentPhone] = useState("");
   const [loading, setLoading] = useState(false);
 
   const distance = pickup && dropoff ? haversineKm(pickup.lat, pickup.lng, dropoff.lat, dropoff.lng) : 0;
@@ -162,8 +165,25 @@ const Orders = () => {
 
   const handleSubmit = async () => {
     if (!user || !pickup || !dropoff) return;
+    
+    if (paymentMethod === "kpay" && !paymentPhone.trim()) {
+      toast({
+        title: "Numéro Mobile Money requis",
+        description: "Saisissez le numéro pour le débit K-Pay.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
-    const { error } = await supabase.from("orders").insert({
+    const deliveryOtp = generateDeliveryOtp();
+    const { data: mem } = await supabase
+      .from("organization_members")
+      .select("organization_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const { data: created, error } = await supabase.from("orders").insert({
       client_id: user.id,
       pickup_address: pickup.address,
       pickup_lat: pickup.lat,
@@ -178,14 +198,36 @@ const Orders = () => {
       recipient_name: recipientName || null,
       recipient_phone: recipientPhone || null,
       status: "pending",
-    });
-    setLoading(false);
-    if (error) {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Commande créée", description: "Votre livraison est enregistrée." });
-      navigate("/dashboard");
+      delivery_otp: deliveryOtp,
+      organization_id: mem?.organization_id ?? null,
+      payment_method: paymentMethod === "cash" ? "cash" : "kpay",
+      payment_status: paymentMethod === "cash" ? "cash_on_delivery" : "pending",
+      payment_phone: paymentMethod === "kpay" ? normalizeDrcPhone(paymentPhone) : null,
+    }).select("id").single();
+    if (error || !created) {
+      setLoading(false);
+      toast({ title: "Erreur", description: error?.message, variant: "destructive" });
+      return;
     }
+    if (paymentMethod === "kpay") {
+      const { error: payErr } = await supabase.functions.invoke("kpay-initiate", {
+        body: {
+          order_id: created.id,
+          msisdn: normalizeDrcPhone(paymentPhone),
+          email: user.email,
+          cname: recipientName || user.email,
+        },
+      });
+      if (payErr) {
+        toast({ title: "K-Pay", description: payErr.message, variant: "destructive" });
+      }
+    }
+    setLoading(false);
+    toast({
+      title: "Commande créée avec succès",
+      description: `Code OTP de livraison : ${deliveryOtp}. Il vous sera demandé à l'arrivée du livreur.`,
+    });
+    navigate("/dashboard");
   };
 
   const markers = [] as Array<{ coordinates: [number, number]; type: "pickup" | "delivery" }>;
@@ -367,10 +409,88 @@ const Orders = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="notes" className="text-muted-foreground text-xs uppercase tracking-wider">Instructions (optionnel)</Label>
-                <Textarea id="notes" placeholder="Code d'accès, étage, précisions..." rows={3} className="bg-secondary border-border" value={notes} onChange={(e) => setNotes(e.target.value)} />
+                <Textarea id="notes" placeholder="Code d'accès, étage, précisions..." rows={2} className="bg-secondary border-border" value={notes} onChange={(e) => setNotes(e.target.value)} />
               </div>
 
-              <Button size="lg" className="w-full font-bold tracking-wide" onClick={handleSubmit} disabled={loading}>
+              {/* Mode de paiement */}
+              <div className="space-y-3 pt-2">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Mode de paiement</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("cash")}
+                    className={`p-3 rounded-xl border text-left flex flex-col justify-between transition-all ${
+                      paymentMethod === "cash"
+                        ? "border-primary bg-primary/10 ring-1 ring-primary/30"
+                        : "border-border bg-secondary hover:border-primary/20"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-2">
+                      <Banknote className={`w-5 h-5 ${paymentMethod === "cash" ? "text-primary" : "text-muted-foreground"}`} />
+                      {paymentMethod === "cash" && <CheckCircle2 className="w-4 h-4 text-primary" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">Cash à la livraison</p>
+                      <p className="text-[11px] text-muted-foreground">Paiement au livreur à l'arrivée</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("kpay")}
+                    className={`p-3 rounded-xl border text-left flex flex-col justify-between transition-all ${
+                      paymentMethod === "kpay"
+                        ? "border-primary bg-primary/10 ring-1 ring-primary/30"
+                        : "border-border bg-secondary hover:border-primary/20"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-2">
+                      <Smartphone className={`w-5 h-5 ${paymentMethod === "kpay" ? "text-primary" : "text-muted-foreground"}`} />
+                      {paymentMethod === "kpay" && <CheckCircle2 className="w-4 h-4 text-primary" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">Mobile Money</p>
+                      <p className="text-[11px] text-muted-foreground">K-Pay (M-Pesa, Orange, Airtel)</p>
+                    </div>
+                  </button>
+                </div>
+
+                {paymentMethod === "kpay" && (
+                  <div className="p-3 bg-secondary/80 border border-primary/20 rounded-xl space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="paymentPhone" className="text-xs text-muted-foreground">Numéro pour le débit Mobile Money</Label>
+                      {paymentPhone && (
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${detectMobileMoneyOperator(paymentPhone).badgeBg} ${detectMobileMoneyOperator(paymentPhone).textColor}`}>
+                          {detectMobileMoneyOperator(paymentPhone).name}
+                        </span>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        id="paymentPhone"
+                        placeholder="081XXXXXXX ou 085XXXXXXX..."
+                        className="pl-9 bg-background border-border text-foreground"
+                        value={paymentPhone}
+                        onChange={(e) => setPaymentPhone(e.target.value)}
+                      />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Un prompt USSD sera envoyé sur ce numéro pour valider le paiement de {price.toLocaleString()} FC.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Notice sécurité OTP */}
+              <div className="p-3 bg-primary/5 border border-primary/20 rounded-xl flex items-start gap-2.5">
+                <ShieldCheck className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                <p className="text-xs text-muted-foreground">
+                  <strong className="text-foreground font-medium">Sécurité livraison :</strong> Un code PIN secret à 4 chiffres (OTP) sera généré automatiquement. Vous devrez le donner au livreur pour valider la réception.
+                </p>
+              </div>
+
+              <Button size="lg" className="w-full font-bold tracking-wide shadow-yellow" onClick={handleSubmit} disabled={loading}>
                 {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <ArrowRight className="w-5 h-5 mr-2" />}
                 {loading ? "Création en cours..." : "CONFIRMER LA COMMANDE"}
               </Button>

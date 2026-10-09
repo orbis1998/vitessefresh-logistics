@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Plus, Package, Clock, MapPin, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,63 +28,55 @@ const Dashboard = () => {
   }, [user]);
 
   const cards = [
-    { icon: Package, label: "Commandes totales", value: stats.total.toString(), color: "bg-primary/10 text-primary" },
-    { icon: Clock, label: "En cours", value: stats.in_progress.toString(), color: "bg-blue-100 text-blue-600" },
-    { icon: MapPin, label: "Livrées", value: stats.delivered.toString(), color: "bg-green-100 text-green-600" },
-    { icon: Package, label: "Dépensé", value: `${stats.spent.toLocaleString()} FC`, color: "bg-purple-100 text-purple-600" },
+    { label: "En cours", value: stats.in_progress.toString(), hint: "courses actives" },
+    { label: "Livrées", value: stats.delivered.toString(), hint: "terminées" },
+    { label: "Total", value: stats.total.toString(), hint: "commandes" },
+    { label: "Dépensé", value: `${stats.spent.toLocaleString()} FC`, hint: "livraisons payées" },
   ];
 
   return (
-    <DashboardLayout title="Tableau de bord" subtitle="Vue d'ensemble de vos livraisons">
-      <div className="space-y-8">
-        <div className="lg:hidden">
-          <Link to="/dashboard/orders">
-            <Button size="lg" className="w-full mb-3">
-              <Plus className="w-5 h-5 mr-2" />
-              Nouvelle commande
-            </Button>
-          </Link>
-          <Link to="/dashboard/orders-list">
-            <Button variant="outline" size="lg" className="w-full">
-              <Package className="w-5 h-5 mr-2" />
-              Mes commandes
+    <DashboardLayout title="Accueil" subtitle="Vos courses">
+      <div className="space-y-6">
+        <div className="rounded-xl bg-[#111] text-white p-6 lg:p-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
+          <div>
+            <p className="text-white/50 text-sm">Prochaine étape</p>
+            <h2 className="font-heading text-2xl lg:text-3xl font-bold mt-1">Où va le colis ?</h2>
+            <p className="text-white/60 mt-2 max-w-md text-sm">
+              Indiquez ramassage et dépôt. Le tarif s'affiche avant confirmation.
+            </p>
+          </div>
+          <Link to="/dashboard/order">
+            <Button size="lg">
+              Nouvelle course
+              <ArrowRight className="w-4 h-4" />
             </Button>
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {cards.map((s, i) => (
-            <motion.div key={s.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} className="bg-background rounded-2xl p-6 border border-border">
-              <div className={`w-12 h-12 ${s.color} rounded-xl flex items-center justify-center mb-4`}>
-                <s.icon className="w-6 h-6" />
-              </div>
-              <p className="text-2xl font-bold">{s.value}</p>
-              <p className="text-sm text-muted-foreground">{s.label}</p>
-            </motion.div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {cards.map((s) => (
+            <div key={s.label} className="bg-card rounded-xl border border-border p-5">
+              <p className="text-xs text-muted-foreground">{s.label}</p>
+              <p className="font-heading text-2xl font-bold mt-2 tracking-tight">{s.value}</p>
+              <p className="text-xs text-muted-foreground mt-1">{s.hint}</p>
+            </div>
           ))}
         </div>
 
-        <div className="grid md:grid-cols-3 gap-4">
-          <Link to="/dashboard/order" className="group">
-            <div className="bg-background rounded-2xl border border-border p-6 hover:border-primary/30 hover:shadow-lg transition-all h-full">
-              <h3 className="font-poppins font-semibold mb-2">Nouvelle commande</h3>
-              <p className="text-sm text-muted-foreground mb-4">Calcul de prix instantané selon la distance</p>
-              <span className="text-primary font-medium inline-flex items-center gap-1 group-hover:gap-2 transition-all">Commander <ArrowRight className="w-4 h-4" /></span>
-            </div>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <Link
+            to="/dashboard/orders-list"
+            className="bg-card rounded-xl border border-border p-5 hover:border-foreground/30 transition-colors"
+          >
+            <p className="font-heading font-semibold">Historique</p>
+            <p className="text-sm text-muted-foreground mt-1">Toutes vos commandes</p>
           </Link>
-          <Link to="/dashboard/orders-list" className="group">
-            <div className="bg-background rounded-2xl border border-border p-6 hover:border-primary/30 hover:shadow-lg transition-all h-full">
-              <h3 className="font-poppins font-semibold mb-2">Mes commandes</h3>
-              <p className="text-sm text-muted-foreground mb-4">Historique complet de vos livraisons</p>
-              <span className="text-primary font-medium inline-flex items-center gap-1 group-hover:gap-2 transition-all">Voir <ArrowRight className="w-4 h-4" /></span>
-            </div>
-          </Link>
-          <Link to="/dashboard/tracking" className="group">
-            <div className="bg-background rounded-2xl border border-border p-6 hover:border-primary/30 hover:shadow-lg transition-all h-full">
-              <h3 className="font-poppins font-semibold mb-2">Suivi en direct</h3>
-              <p className="text-sm text-muted-foreground mb-4">Carte temps réel des livreurs</p>
-              <span className="text-primary font-medium inline-flex items-center gap-1 group-hover:gap-2 transition-all">Suivre <ArrowRight className="w-4 h-4" /></span>
-            </div>
+          <Link
+            to="/dashboard/tracking"
+            className="bg-card rounded-xl border border-border p-5 hover:border-foreground/30 transition-colors"
+          >
+            <p className="font-heading font-semibold">Carte live</p>
+            <p className="text-sm text-muted-foreground mt-1">Position du livreur</p>
           </Link>
         </div>
       </div>

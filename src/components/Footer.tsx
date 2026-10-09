@@ -1,146 +1,61 @@
 import { Link } from "react-router-dom";
-import { Package, Phone, Mail, MapPin, Facebook, Twitter, Instagram, Linkedin } from "lucide-react";
+import { VitaWordmark } from "@/components/brand/VitaWordmark";
 
 const Footer = () => {
-  const currentYear = new Date().getFullYear();
+  const year = new Date().getFullYear();
 
   return (
-    <footer className="bg-secondary text-secondary-foreground">
-      <div className="container-custom py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
-          {/* Brand */}
-          <div className="space-y-4">
-            <Link to="/" className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
-                <Package className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <span className="font-poppins font-bold text-xl text-secondary-foreground">
-                Vita<span className="text-primary">Express</span>
-              </span>
+    <footer className="bg-[#0d0d0d] text-white border-t border-white/10">
+      <div className="container-custom py-12 sm:py-16">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-10">
+          <div className="col-span-2 space-y-4">
+            <Link to="/" aria-label="Vita Express">
+              <VitaWordmark className="text-lg text-white" />
             </Link>
-            <p className="text-secondary-foreground/70 text-sm leading-relaxed">
+            <p className="text-white/55 text-sm leading-relaxed max-w-xs">
               Votre partenaire de confiance pour la livraison rapide et fiable à Kinshasa.
               Service premium, tarifs compétitifs.
             </p>
-            <div className="flex items-center gap-3">
-              <a
-                href="#"
-                className="w-10 h-10 bg-secondary-foreground/10 rounded-lg flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"
-              >
-                <Facebook className="w-5 h-5" />
-              </a>
-              <a
-                href="#"
-                className="w-10 h-10 bg-secondary-foreground/10 rounded-lg flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"
-              >
-                <Twitter className="w-5 h-5" />
-              </a>
-              <a
-                href="#"
-                className="w-10 h-10 bg-secondary-foreground/10 rounded-lg flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"
-              >
-                <Instagram className="w-5 h-5" />
-              </a>
-              <a
-                href="#"
-                className="w-10 h-10 bg-secondary-foreground/10 rounded-lg flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"
-              >
-                <Linkedin className="w-5 h-5" />
-              </a>
-            </div>
+            <p className="text-sm text-white/45 leading-relaxed">
+              Boulevard du 30 Juin, Gombe<br />
+              Kinshasa, RDC<br />
+              contact@vita-express.cd
+            </p>
           </div>
 
-          {/* Services */}
           <div>
-            <h4 className="font-poppins font-semibold text-lg mb-4">Services</h4>
-            <ul className="space-y-3">
-              <li>
-                <Link to="/services" className="text-secondary-foreground/70 hover:text-primary transition-colors">
-                  Livraison Express
-                </Link>
-              </li>
-              <li>
-                <Link to="/services" className="text-secondary-foreground/70 hover:text-primary transition-colors">
-                  Livraison Standard
-                </Link>
-              </li>
-              <li>
-                <Link to="/forfaits" className="text-secondary-foreground/70 hover:text-primary transition-colors">
-                  Forfaits Entreprise
-                </Link>
-              </li>
-              <li>
-                <Link to="/suivi" className="text-secondary-foreground/70 hover:text-primary transition-colors">
-                  Suivi en Temps Réel
-                </Link>
-              </li>
+            <h4 className="font-heading text-sm font-semibold mb-4">Produit</h4>
+            <ul className="space-y-2.5 text-sm text-white/55">
+              <li><Link to="/services" className="hover:text-white">Services</Link></li>
+              <li><Link to="/forfaits" className="hover:text-white">Forfaits</Link></li>
+              <li><Link to="/tracking" className="hover:text-white">Suivi de colis</Link></li>
+              <li><Link to="/auth/register" className="hover:text-white">Commander</Link></li>
             </ul>
           </div>
 
-          {/* Support */}
           <div>
-            <h4 className="font-poppins font-semibold text-lg mb-4">Support</h4>
-            <ul className="space-y-3">
-              <li>
-                <Link to="/faq" className="text-secondary-foreground/70 hover:text-primary transition-colors">
-                  FAQ
-                </Link>
-              </li>
-              <li>
-                <Link to="/contact" className="text-secondary-foreground/70 hover:text-primary transition-colors">
-                  Contactez-nous
-                </Link>
-              </li>
-              <li>
-                <Link to="/terms" className="text-secondary-foreground/70 hover:text-primary transition-colors">
-                  Conditions d'utilisation
-                </Link>
-              </li>
-              <li>
-                <Link to="/privacy" className="text-secondary-foreground/70 hover:text-primary transition-colors">
-                  Politique de confidentialité
-                </Link>
-              </li>
+            <h4 className="font-heading text-sm font-semibold mb-4">Entreprise</h4>
+            <ul className="space-y-2.5 text-sm text-white/55">
+              <li><Link to="/contact" className="hover:text-white">Contact</Link></li>
+              <li><Link to="/auth/register" className="hover:text-white">Créer un compte</Link></li>
+              <li><Link to="/auth/login" className="hover:text-white">Espace client</Link></li>
             </ul>
           </div>
 
-          {/* Contact */}
           <div>
-            <h4 className="font-poppins font-semibold text-lg mb-4">Contact</h4>
-            <ul className="space-y-4">
-              <li className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                <span className="text-secondary-foreground/70 text-sm">
-                  Boulevard du 30 Juin, Kinshasa, RDC
-                </span>
-              </li>
-              <li className="flex items-center gap-3">
-                <Phone className="w-5 h-5 text-primary shrink-0" />
-                <span className="text-secondary-foreground/70 text-sm">
-                  +243 XXX XXX XXX
-                </span>
-              </li>
-              <li className="flex items-center gap-3">
-                <Mail className="w-5 h-5 text-primary shrink-0" />
-                <span className="text-secondary-foreground/70 text-sm">
-                  contact@vita-express.cd
-                </span>
-              </li>
+            <h4 className="font-heading text-sm font-semibold mb-4">Légal</h4>
+            <ul className="space-y-2.5 text-sm text-white/55">
+              <li><Link to="/mentions-legales" className="hover:text-white">Mentions légales</Link></li>
+              <li><Link to="/confidentialite" className="hover:text-white">Politique de confidentialité</Link></li>
+              <li><Link to="/cgu" className="hover:text-white">Conditions d'utilisation</Link></li>
+              <li><Link to="/cookies" className="hover:text-white">Politique cookies</Link></li>
             </ul>
           </div>
         </div>
 
-        {/* Bottom */}
-        <div className="mt-12 pt-8 border-t border-secondary-foreground/10">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-secondary-foreground/50 text-sm">
-              © {currentYear} Vita Express. Tous droits réservés.
-            </p>
-            <p className="text-secondary-foreground/50 text-sm flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-primary" />
-              Conçu à Kinshasa, RDC
-            </p>
-          </div>
+        <div className="mt-12 pt-6 border-t border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-white/40">
+          <p>© {year} Vita Express. Tous droits réservés.</p>
+          <p>Conçu à Kinshasa, RDC</p>
         </div>
       </div>
     </footer>

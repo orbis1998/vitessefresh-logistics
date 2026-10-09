@@ -14,8 +14,10 @@ export default {
     },
     extend: {
       fontFamily: {
-        poppins: ["Poppins", "sans-serif"],
-        montserrat: ["Montserrat", "sans-serif"],
+        sans: ["Figtree", "ui-sans-serif", "system-ui", "sans-serif"],
+        heading: ["Sora", "ui-sans-serif", "system-ui", "sans-serif"],
+        poppins: ["Sora", "ui-sans-serif", "system-ui", "sans-serif"],
+        montserrat: ["Figtree", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",

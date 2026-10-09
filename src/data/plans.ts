@@ -1,0 +1,38 @@
+export const plans = [
+  {
+    name: "À la course",
+    price: "2 000 FC",
+    hint: "et plus, selon la distance",
+    features: ["Paiement à la livraison", "Suivi GPS", "Support standard"],
+    cta: "Commander",
+    href: "/auth/register",
+    featured: false,
+  },
+  {
+    name: "Pack 20",
+    price: "35 000 FC",
+    hint: "courses prépayées, 30 jours",
+    features: ["Environ 15% d'économie", "Suivi GPS", "Support prioritaire"],
+    cta: "Prendre le pack",
+    href: "/auth/register",
+    featured: true,
+  },
+  {
+    name: "Mensuel",
+    price: "100 000 FC",
+    hint: "50 courses / mois",
+    features: ["Priorité flotte", "Facture mensuelle", "Support VIP"],
+    cta: "S'abonner",
+    href: "/auth/register",
+    featured: false,
+  },
+  {
+    name: "Entreprise",
+    price: "Sur devis",
+    hint: "volume et API",
+    features: ["Livreurs dédiés", "Account manager", "Reporting"],
+    cta: "Parler à l'équipe",
+    href: "/contact",
+    featured: false,
+  },
+];

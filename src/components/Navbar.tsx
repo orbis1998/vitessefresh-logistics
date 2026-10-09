@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, ChevronDown, Package, User, Truck } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { VitaWordmark } from "@/components/brand/VitaWordmark";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -12,33 +12,36 @@ const Navbar = () => {
     { href: "/", label: "Accueil" },
     { href: "/services", label: "Services" },
     { href: "/forfaits", label: "Forfaits" },
-    { href: "/suivi", label: "Suivi" },
+    { href: "/tracking", label: "Suivi" },
     { href: "/contact", label: "Contact" },
   ];
 
+  const isHome = location.pathname === "/";
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50">
+    <nav
+      className={`fixed top-0 left-0 right-0 z-50 ${
+        isHome
+          ? "bg-background/85 backdrop-blur-md border-b border-white/5 lg:bg-transparent lg:backdrop-blur-none lg:border-transparent"
+          : "bg-background/90 backdrop-blur-md border-b border-border"
+      }`}
+    >
       <div className="container-custom">
-        <div className="flex items-center justify-between h-16 lg:h-20">
-          {/* Logo */}
-          <Link to="/" className="flex items-center">
-            <span className="font-poppins font-bold text-xl lg:text-2xl text-foreground">
-              Vita <span className="text-primary">Express</span>
-            </span>
+        <div className="flex items-center justify-between h-16 lg:h-[72px]">
+          <Link to="/" aria-label="Vita Express">
+            <VitaWordmark className="text-lg text-foreground" />
           </Link>
 
-          {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center gap-1">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 to={link.href}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                className={`px-3 py-2 text-sm font-medium transition-colors ${
                   isActive(link.href)
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {link.label}
@@ -46,8 +49,7 @@ const Navbar = () => {
             ))}
           </div>
 
-          {/* Desktop Auth Buttons */}
-          <div className="hidden lg:flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-2">
             <Link to="/auth/login">
               <Button variant="ghost" size="sm">
                 Connexion
@@ -58,54 +60,46 @@ const Navbar = () => {
             </Link>
           </div>
 
-          {/* Mobile Menu Button */}
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="lg:hidden p-2 rounded-lg hover:bg-muted transition-colors"
+            className="lg:hidden p-2 rounded-md hover:bg-muted"
+            aria-label={isOpen ? "Fermer le menu" : "Ouvrir le menu"}
           >
-            {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile Menu */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden bg-background border-b border-border"
-          >
-            <div className="container-custom py-4 space-y-2">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  to={link.href}
-                  onClick={() => setIsOpen(false)}
-                  className={`block px-4 py-3 rounded-lg font-medium transition-colors ${
-                    isActive(link.href)
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
-              <div className="pt-4 space-y-2">
-                <Link to="/auth/login" onClick={() => setIsOpen(false)}>
-                  <Button variant="outline" className="w-full">
-                    Connexion
-                  </Button>
-                </Link>
-                <Link to="/auth/register" onClick={() => setIsOpen(false)}>
-                  <Button className="w-full">S'inscrire</Button>
-                </Link>
-              </div>
+      {isOpen && (
+        <div className="lg:hidden bg-background border-b border-border">
+          <div className="container-custom py-3 space-y-1">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                to={link.href}
+                onClick={() => setIsOpen(false)}
+                className={`block px-3 py-2.5 rounded-md text-sm font-medium ${
+                  isActive(link.href)
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground"
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+            <div className="pt-3 grid grid-cols-2 gap-2">
+              <Link to="/auth/login" onClick={() => setIsOpen(false)}>
+                <Button variant="outline" className="w-full">
+                  Connexion
+                </Button>
+              </Link>
+              <Link to="/auth/register" onClick={() => setIsOpen(false)}>
+                <Button className="w-full">S'inscrire</Button>
+              </Link>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+        </div>
+      )}
     </nav>
   );
 };

@@ -8,7 +8,9 @@ import {
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-export type AppRole = "client" | "livreur" | "admin";
+import { pickPrimaryRole, type AppRole } from "@/lib/roles";
+
+export type { AppRole };
 
 interface AuthContextValue {
   user: User | null;
@@ -81,14 +83,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const hasRole = (role: AppRole) => roles.includes(role);
 
-  // priority order admin > livreur > client
-  const primaryRole: AppRole | null = roles.includes("admin")
-    ? "admin"
-    : roles.includes("livreur")
-      ? "livreur"
-      : roles.includes("client")
-        ? "client"
-        : null;
+  const primaryRole: AppRole | null = pickPrimaryRole(roles);
 
   const refreshRoles = async () => {
     if (user) await fetchRoles();

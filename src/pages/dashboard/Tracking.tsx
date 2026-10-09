@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Loader2, Package, Phone, Navigation, RefreshCw, AlertCircle, CheckCircle2, ArrowRight, Clock } from "lucide-react";
+import {
+  Loader2, Package, Phone, Navigation, RefreshCw, AlertCircle, CheckCircle2,
+  ArrowRight, Clock, KeyRound, Copy, Check, Share2, ShieldCheck, Banknote, Smartphone
+} from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +11,7 @@ import MapView from "@/components/MapView";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useMapboxToken } from "@/hooks/useMapboxToken";
+import { useToast } from "@/hooks/use-toast";
 
 const STATUS_META: Record<string, { label: string; color: string }> = {
   pending: { label: "En attente d'un livreur", color: "text-yellow-400" },
@@ -31,7 +35,9 @@ const Tracking = () => {
   const [route, setRoute] = useState<Array<[number, number]> | null>(null);
   const [estimatedTime, setEstimatedTime] = useState<number | null>(null);
   const [calculatingRoute, setCalculatingRoute] = useState(false);
+  const [copiedOtp, setCopiedOtp] = useState(false);
   const { token } = useMapboxToken();
+  const { toast } = useToast();
 
   // load active orders list
   useEffect(() => {
@@ -130,21 +136,43 @@ const Tracking = () => {
     calculateRoute();
   }, [driverLoc, order, token]);
 
-  const refreshDriverLoc = async () => {
+  const refreshDriverLoc = () => {
     if (!order?.driver_id) return;
     setRefreshing(true);
-    const { data } = await supabase
+    supabase
       .from("driver_locations")
       .select("latitude,longitude")
       .eq("driver_id", order.driver_id)
-      .maybeSingle();
-    if (data) {
-      setDriverLoc({ lat: Number(data.latitude), lng: Number(data.longitude) });
-      setGpsActive(true);
-    } else {
-      setGpsActive(false);
-    }
-    setRefreshing(false);
+      .maybeSingle()
+      .then(({ data: loc }) => {
+        if (loc) {
+          setDriverLoc({ lat: Number(loc.latitude), lng: Number(loc.longitude) });
+          setGpsActive(true);
+        } else {
+          setGpsActive(false);
+        }
+        setRefreshing(false);
+      });
+  };
+
+  const handleCopyOtp = () => {
+    if (!order?.delivery_otp) return;
+    navigator.clipboard.writeText(order.delivery_otp);
+    setCopiedOtp(true);
+    toast({ title: "Code copié !", description: `Le code OTP ${order.delivery_otp} a été copié dans le presse-papier.` });
+    setTimeout(() => setCopiedOtp(false), 2000);
+  };
+
+  const handleShareWhatsApp = () => {
+    if (!order) return;
+    const otp = order.delivery_otp || "N/A";
+    const text = `📦 *Livraison Vita Express Kinshasa*\n` +
+      `Bonjour ! Voici les détails pour réceptionner le colis :\n\n` +
+      `📍 *Destination :* ${order.dropoff_address}\n` +
+      `🔑 *Code secret OTP :* ${otp}\n\n` +
+      `⚠️ *Important :* Donnez ce code au livreur uniquement lorsqu'il est sur place pour vous remettre le colis.\n\n` +
+      `🔗 *Lien de suivi :* ${window.location.origin}/tracking`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   };
 
   const markers = order
@@ -239,7 +267,85 @@ const Tracking = () => {
                   <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
                 </Button>
               </div>
+
+              {/* Mode de paiement */}
+              <div className="pt-2 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  {order.payment_method === "kpay" || order.payment_method === "flexpay" ? (
+                    <Smartphone className="w-4 h-4 text-primary" />
+                  ) : (
+                    <Banknote className="w-4 h-4 text-primary" />
+                  )}
+                  <span>
+                    {order.payment_method === "kpay" || order.payment_method === "flexpay"
+                      ? `Mobile Money ${order.payment_phone ? `(${order.payment_phone})` : ""}`
+                      : "Paiement en espèces à la livraison"}
+                  </span>
+                </div>
+                <Badge variant="outline" className={order.payment_status === "paid" ? "border-green-500 text-green-400" : "border-border text-muted-foreground"}>
+                  {order.payment_status === "paid" ? "Payé ✓" : order.payment_method === "cash" ? "À régler au livreur" : "En attente"}
+                </Badge>
+              </div>
             </div>
+
+            {/* ── CARTE CODE OTP DE LIVRAISON SÉCURISÉ ── */}
+            {order.status !== "delivered" && order.status !== "cancelled" && (
+              <div className="bg-gradient-to-br from-primary/15 via-card to-card border-2 border-primary/30 rounded-2xl p-5 shadow-lg relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -z-0 pointer-events-none" />
+                
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="w-5 h-5 text-primary" />
+                      <span className="font-poppins font-bold text-sm uppercase tracking-wider text-foreground">
+                        Code de sécurité livraison (OTP)
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground max-w-md">
+                      Communiquez ce code au livreur <strong>uniquement à son arrivée</strong> lors de la remise effective du colis.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="bg-black/80 border border-primary/40 px-4 py-2 rounded-xl text-2xl font-mono font-black tracking-widest text-primary shadow-inner">
+                      {order.delivery_otp || "----"}
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        size="icon"
+                        variant="secondary"
+                        onClick={handleCopyOtp}
+                        title="Copier le code"
+                        className="rounded-xl border border-border"
+                      >
+                        {copiedOtp ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-primary" />}
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        onClick={handleShareWhatsApp}
+                        className="bg-green-600 hover:bg-green-500 text-white font-medium rounded-xl gap-1.5 shadow-sm"
+                        title="Partager par WhatsApp"
+                      >
+                        <Share2 className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Partager WhatsApp</span>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {order.status === "delivered" && (
+              <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-4 flex items-center gap-3">
+                <CheckCircle2 className="w-6 h-6 text-green-400 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-green-400">Course livrée avec succès</p>
+                  <p className="text-xs text-muted-foreground">La remise du colis a été validée avec le code secret OTP.</p>
+                </div>
+              </div>
+            )}
 
             {/* Map */}
             <div className="bg-card border border-border rounded-2xl overflow-hidden h-[400px] relative">

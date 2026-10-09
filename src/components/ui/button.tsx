@@ -5,29 +5,29 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold font-poppins ring-offset-background transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-semibold font-heading ring-offset-background transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow-yellow hover:shadow-yellow-lg hover:-translate-y-0.5",
+          "bg-primary text-primary-foreground hover:bg-primary/90",
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline:
-          "border-2 border-primary bg-transparent text-primary hover:bg-primary hover:text-primary-foreground",
+          "border border-foreground/20 bg-transparent text-foreground hover:bg-foreground hover:text-background",
         secondary:
-          "bg-secondary text-secondary-foreground shadow-md hover:shadow-lg hover:-translate-y-0.5",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost: "hover:bg-muted hover:text-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        hero: "bg-primary text-primary-foreground shadow-yellow-lg hover:shadow-[0_20px_60px_-15px_hsl(45_100%_50%_/_0.6)] hover:-translate-y-1 text-base",
-        "hero-secondary": "bg-secondary text-secondary-foreground shadow-lg hover:shadow-xl hover:-translate-y-1 text-base",
-        "hero-outline": "border-2 border-secondary text-secondary bg-transparent hover:bg-secondary hover:text-secondary-foreground text-base",
+        hero: "bg-primary text-primary-foreground hover:bg-primary/90 text-base",
+        "hero-secondary": "bg-foreground text-background hover:bg-foreground/90 text-base",
+        "hero-outline": "border border-white/30 text-white bg-transparent hover:bg-white hover:text-background text-base",
       },
       size: {
-        default: "h-11 px-6 py-2",
-        sm: "h-9 rounded-lg px-4",
-        lg: "h-12 rounded-xl px-8 text-base",
-        xl: "h-14 rounded-2xl px-10 text-lg",
+        default: "h-11 px-5 py-2",
+        sm: "h-9 rounded-md px-3.5",
+        lg: "h-12 rounded-lg px-6 text-base",
+        xl: "h-13 rounded-lg px-8 text-base h-14",
         icon: "h-10 w-10",
       },
     },

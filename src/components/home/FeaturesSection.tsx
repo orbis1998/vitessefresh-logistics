@@ -1,87 +1,119 @@
-import { motion } from "framer-motion";
-import { Truck, Clock, MapPin, CreditCard, Shield, Headphones } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useInView } from "@/hooks/useInView";
 
 const features = [
   {
-    icon: Truck,
+    n: "01",
     title: "Livraison Express",
     description: "Vos colis livrés en moins de 45 minutes dans toutes les zones de Kinshasa.",
   },
   {
-    icon: MapPin,
-    title: "Suivi en Temps Réel",
-    description: "Suivez votre livreur sur la carte et recevez des notifications à chaque étape.",
+    n: "02",
+    title: "Suivi en temps réel",
+    description: "Suivez votre livreur sur la carte et recevez une alerte à chaque étape.",
   },
   {
-    icon: Clock,
-    title: "Disponible 24/7",
-    description: "Notre équipe de livreurs est disponible jour et nuit pour vous servir.",
+    n: "03",
+    title: "Ouvert 7j/7",
+    description: "Les courses partent le jour, le soir, le dimanche. Kinshasa ne s’arrête pas.",
   },
   {
-    icon: CreditCard,
-    title: "Paiement Flexible",
-    description: "Payez à la livraison ou optez pour nos forfaits prépayés avantageux.",
+    n: "04",
+    title: "Paiement flexible",
+    description: "Payez à la livraison ou avec un forfait prépayé, sans surprise sur le tarif.",
   },
   {
-    icon: Shield,
-    title: "Colis Assurés",
-    description: "Tous vos envois sont protégés et garantis contre les dommages.",
+    n: "05",
+    title: "Colis assurés",
+    description: "Chaque envoi est protégé. En cas de souci, on traite, on ne disparaît pas.",
   },
   {
-    icon: Headphones,
-    title: "Support Dédié",
-    description: "Une équipe réactive pour répondre à toutes vos questions.",
+    n: "06",
+    title: "Support dédié",
+    description: "Une équipe à Kinshasa, joignable quand la course bloque ou change de destination.",
   },
 ];
 
 const FeaturesSection = () => {
-  return (
-    <section className="py-24 bg-muted/30">
-      <div className="container-custom">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center max-w-3xl mx-auto mb-16"
-        >
-          <span className="text-primary font-semibold text-sm uppercase tracking-wider">
-            Pourquoi nous choisir
-          </span>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-poppins font-bold mt-4 mb-6">
-            La livraison réinventée pour{" "}
-            <span className="text-primary">Kinshasa</span>
-          </h2>
-          <p className="text-lg text-muted-foreground">
-            Vita Express combine technologie moderne et service de proximité pour 
-            vous offrir une expérience de livraison sans pareille.
-          </p>
-        </motion.div>
+  const { ref, visible } = useInView<HTMLElement>();
+  const [clock, setClock] = useState("");
 
-        {/* Features Grid */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {features.map((feature, index) => (
-            <motion.div
-              key={feature.title}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.1 }}
-              className="group"
-            >
-              <div className="bg-background rounded-2xl p-8 h-full border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300">
-                <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-primary group-hover:shadow-yellow transition-all duration-300">
-                  <feature.icon className="w-7 h-7 text-primary group-hover:text-primary-foreground transition-colors" />
+  useEffect(() => {
+    const tick = () =>
+      setClock(
+        new Date().toLocaleTimeString("fr-FR", {
+          hour: "2-digit",
+          minute: "2-digit",
+          timeZone: "Africa/Kinshasa",
+        })
+      );
+    tick();
+    const id = window.setInterval(tick, 30000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  return (
+    <section ref={ref} className="py-20 sm:py-28 bg-background">
+      <div className="container-custom">
+        <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-start">
+          <div
+            className={`lg:col-span-5 lg:sticky lg:top-28 transition-all duration-700 ease-vita ${
+              visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+            }`}
+          >
+            <p className="text-[11px] uppercase tracking-[0.2em] text-primary font-medium">Pourquoi Vita</p>
+            <h2 className="mt-3 font-heading text-3xl sm:text-4xl lg:text-[2.75rem] font-bold leading-tight">
+              La livraison réinventée pour Kinshasa
+            </h2>
+            <p className="mt-6 text-muted-foreground text-base sm:text-lg leading-relaxed max-w-md">
+              Vita Express combine la carte, le tarif et un livreur près de chez vous.
+              Pas un logiciel importé : un réseau qui connaît Gombe, Lemba, Limete.
+            </p>
+
+            <div className="mt-8 rounded-[1.35rem] border border-white/10 bg-white/[0.03] p-1.5">
+              <div className="rounded-[1.1rem] bg-[#141414] p-5 sm:p-6">
+                <div className="flex items-center justify-between text-xs text-white/45">
+                  <span>Dispatch · Kinshasa</span>
+                  <span className="tabular-nums text-primary">{clock || "--:--"}</span>
                 </div>
-                <h3 className="text-xl font-poppins font-semibold mb-3">
-                  {feature.title}
-                </h3>
-                <p className="text-muted-foreground leading-relaxed">
-                  {feature.description}
-                </p>
+                <div className="mt-4 space-y-3">
+                  {[
+                    ["Gombe → Limete", "En route", "12 min"],
+                    ["Ngaliema → Kintambo", "Ramassage", "4 min"],
+                    ["Lemba → Matete", "Assigné", "18 min"],
+                  ].map(([route, state, eta]) => (
+                    <div key={route} className="flex items-center justify-between gap-3 border-t border-white/10 pt-3 first:border-0 first:pt-0">
+                      <div>
+                        <p className="text-sm text-white">{route}</p>
+                        <p className="text-xs text-white/40 mt-0.5">{state}</p>
+                      </div>
+                      <span className="text-xs text-primary tabular-nums">{eta}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </motion.div>
-          ))}
+            </div>
+          </div>
+
+          <ul className="lg:col-span-7">
+            {features.map((feature, i) => (
+              <li
+                key={feature.n}
+                className={`group flex gap-4 sm:gap-6 py-5 sm:py-6 border-t border-white/10 first:border-t-0 transition-all duration-700 ease-vita ${
+                  visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+                }`}
+                style={{ transitionDelay: visible ? `${120 + i * 70}ms` : "0ms" }}
+              >
+                <span className="font-heading text-sm text-primary/80 tabular-nums pt-1">{feature.n}</span>
+                <div>
+                  <h3 className="font-heading text-lg sm:text-xl font-semibold">{feature.title}</h3>
+                  <p className="mt-2 text-muted-foreground leading-relaxed text-sm sm:text-base max-w-md">
+                    {feature.description}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </section>

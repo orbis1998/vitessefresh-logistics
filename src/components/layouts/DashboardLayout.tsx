@@ -1,22 +1,7 @@
-import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import {
-  Package,
-  Home,
-  Plus,
-  Clock,
-  MapPin,
-  User,
-  LogOut,
-  Menu,
-  X,
-  Truck,
-  Users,
-  Shield,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useAuth, AppRole } from "@/hooks/useAuth";
+import { LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { HOME_BY_ROLE, MENU_BY_ROLE, ROLE_LABEL, isStaff } from "@/lib/roles";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -24,121 +9,142 @@ interface DashboardLayoutProps {
   subtitle?: string;
 }
 
-const menuByRole: Record<AppRole, { icon: any; label: string; href: string }[]> = {
-  client: [
-    { icon: Home, label: "Tableau de bord", href: "/dashboard" },
-    { icon: Plus, label: "Nouvelle commande", href: "/dashboard/order" },
-    { icon: Clock, label: "Mes commandes", href: "/dashboard/orders" },
-    { icon: MapPin, label: "Suivi en direct", href: "/dashboard/tracking" },
-  ],
-  livreur: [
-    { icon: Home, label: "Tableau de bord", href: "/livreur" },
-    { icon: Package, label: "Courses disponibles", href: "/livreur/courses" },
-    { icon: Truck, label: "Mes livraisons", href: "/livreur/livraisons" },
-  ],
-  admin: [
-    { icon: Shield, label: "Vue globale", href: "/admin" },
-    { icon: Users, label: "Utilisateurs", href: "/admin/utilisateurs" },
-    { icon: Truck, label: "Livreurs", href: "/admin/livreurs" },
-    { icon: Package, label: "Commandes", href: "/admin/commandes" },
-  ],
-};
-
 const DashboardLayout = ({ children, title, subtitle }: DashboardLayoutProps) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, primaryRole, signOut } = useAuth();
+  const { user, primaryRole, signOut, roles } = useAuth();
 
   const role = primaryRole ?? "client";
-  const menuItems = menuByRole[role];
-  const isActive = (href: string) => location.pathname === href;
+  const menuItems = MENU_BY_ROLE[role] ?? MENU_BY_ROLE.client;
+  const ops = isStaff(roles) || role === "livreur" || role === "entreprise";
+  const isActive = (href: string) =>
+    href === "/admin" || href === "/entreprise" || href === "/livreur" || href === "/dashboard"
+      ? location.pathname === href
+      : location.pathname === href || location.pathname.startsWith(`${href}/`);
 
   const handleLogout = async () => {
     await signOut();
     navigate("/");
   };
 
-  const roleLabel =
-    role === "admin" ? "Administrateur" : role === "livreur" ? "Livreur" : "Client";
+  const initials = (user?.email ?? "U").slice(0, 1).toUpperCase();
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-background border-b border-border h-16 flex items-center px-4">
-        <button onClick={() => setSidebarOpen(true)} className="p-2 hover:bg-muted rounded-lg">
-          <Menu className="w-6 h-6" />
-        </button>
-        <span className="ml-4 font-poppins font-semibold text-sm">{title}</span>
-      </header>
-
-      {sidebarOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="lg:hidden fixed inset-0 z-40 bg-foreground/50"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
+    <div className={ops ? "min-h-screen bg-[#101214] text-white" : "theme-app min-h-screen bg-background text-foreground"}>
       <aside
-        className={`fixed top-0 left-0 z-50 h-full w-72 bg-background border-r border-border transform transition-transform duration-300 lg:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        className={`hidden lg:flex fixed inset-y-0 left-0 z-40 w-[200px] flex-col py-4 border-r ${
+          ops ? "bg-[#0a0a0a] border-white/10" : "bg-card border-border"
         }`}
       >
-        <div className="flex flex-col h-full">
-          <div className="h-16 lg:h-20 flex items-center justify-between px-6 border-b border-border">
-            <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 hover:bg-muted rounded-lg">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+        <Link
+          to={HOME_BY_ROLE[role]}
+          className="mb-6 px-4 font-heading font-bold text-primary text-sm tracking-tight"
+        >
+          Vita <span className={ops ? "text-white" : "text-foreground"}>Express</span>
+        </Link>
 
-          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-            {menuItems.map((item) => (
+        <nav className="flex-1 flex flex-col gap-0.5 w-full px-2 overflow-y-auto">
+          {menuItems.map((item) => {
+            const active = isActive(item.href);
+            return (
               <Link
                 key={item.href}
                 to={item.href}
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                  isActive(item.href)
-                    ? "bg-primary text-primary-foreground shadow-yellow"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[12px] font-medium transition-colors ${
+                  active
+                    ? "bg-primary text-primary-foreground"
+                    : ops
+                      ? "text-white/55 hover:bg-white/10 hover:text-white"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                 }`}
               >
-                <item.icon className="w-5 h-5" />
-                <span className="font-medium">{item.label}</span>
+                <item.icon className="w-4 h-4 shrink-0" strokeWidth={1.8} />
+                {item.label}
               </Link>
-            ))}
-          </nav>
+            );
+          })}
+        </nav>
 
-          <div className="p-4 border-t border-border">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                <User className="w-5 h-5 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm truncate">{user?.email}</p>
-                <p className="text-xs text-muted-foreground">{roleLabel}</p>
-              </div>
-            </div>
-            <Button variant="outline" size="sm" className="w-full" onClick={handleLogout}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Déconnexion
-            </Button>
-          </div>
-        </div>
+        <button
+          onClick={handleLogout}
+          className={`mx-2 mt-2 flex items-center gap-2.5 rounded-lg px-3 py-2 text-[12px] ${
+            ops ? "text-white/45 hover:bg-white/10 hover:text-white" : "text-muted-foreground hover:bg-secondary"
+          }`}
+        >
+          <LogOut className="w-4 h-4" strokeWidth={1.8} />
+          Sortir
+        </button>
       </aside>
 
-      <main className="lg:ml-72 pt-16 lg:pt-0 min-h-screen">
+      <header
+        className={`lg:hidden sticky top-0 z-40 flex h-14 items-center justify-between border-b px-4 ${
+          ops ? "border-white/10 bg-[#0a0a0a]" : "border-border bg-card"
+        }`}
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="font-heading font-bold text-primary text-sm">VE</span>
+          <div className="min-w-0">
+            <p className="font-heading text-sm font-semibold leading-none">{title}</p>
+            {subtitle && (
+              <p className={`text-[11px] mt-0.5 ${ops ? "text-white/45" : "text-muted-foreground"}`}>{subtitle}</p>
+            )}
+          </div>
+        </div>
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
+          {initials}
+        </div>
+      </header>
+
+      <main className="lg:ml-[200px] min-h-screen pb-24 lg:pb-0">
         {(title || subtitle) && (
-          <header className="hidden lg:flex h-20 items-center justify-between px-8 border-b border-border bg-background">
+          <header
+            className={`hidden lg:flex h-[64px] items-center justify-between px-8 border-b ${
+              ops ? "border-white/10 bg-[#0a0a0a]/80" : "border-border bg-card"
+            }`}
+          >
             <div>
-              <h1 className="text-xl font-poppins font-semibold">{title}</h1>
-              {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+              <h1 className="text-lg font-heading font-semibold">{title}</h1>
+              {subtitle && (
+                <p className={`text-sm ${ops ? "text-white/45" : "text-muted-foreground"}`}>{subtitle}</p>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <p className="text-sm font-medium truncate max-w-[180px]">{user?.email}</p>
+                <p className={`text-xs ${ops ? "text-white/40" : "text-muted-foreground"}`}>{ROLE_LABEL[role]}</p>
+              </div>
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
+                {initials}
+              </div>
             </div>
           </header>
         )}
         <div className="p-4 lg:p-8">{children}</div>
       </main>
+
+      <nav
+        className={`lg:hidden fixed bottom-0 inset-x-0 z-40 border-t safe-area-pb overflow-x-auto ${
+          ops ? "border-white/10 bg-[#0a0a0a]" : "border-border bg-card"
+        }`}
+      >
+        <div className="flex min-w-max">
+          {menuItems.map((item) => {
+            const active = isActive(item.href);
+            return (
+              <Link
+                key={item.href}
+                to={item.href}
+                className={`flex flex-col items-center gap-1 px-3 py-3 text-[10px] font-medium min-w-[64px] ${
+                  active ? "text-primary" : ops ? "text-white/45" : "text-muted-foreground"
+                }`}
+              >
+                <item.icon className="w-4 h-4" strokeWidth={active ? 2.2 : 1.7} />
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 };

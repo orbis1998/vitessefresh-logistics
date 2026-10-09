@@ -22,3 +22,11 @@ export function computePriceFC(distanceKm: number, baseZonePrice = 1500): number
   const raw = baseZonePrice + distanceKm * perKm;
   return Math.max(minPrice, Math.round(raw / 100) * 100);
 }
+
+export function formatFC(amount: number) {
+  return `${amount.toLocaleString("fr-FR")} FC`;
+}
+
+export function estimateMinutes(distanceKm: number) {
+  return Math.max(12, Math.round(distanceKm / 0.28));
+}

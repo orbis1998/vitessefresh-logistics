@@ -1,0 +1,48 @@
+import { useEffect, useState } from "react";
+import DashboardLayout from "@/components/layouts/DashboardLayout";
+import OpsMap, { type OpsMarker } from "@/components/ops/OpsMap";
+import { supabase } from "@/integrations/supabase/client";
+
+const AdminLiveMap = () => {
+  const [markers, setMarkers] = useState<OpsMarker[]>([]);
+
+  const load = async () => {
+    const [{ data: locs }, { data: orders }] = await Promise.all([
+      supabase.from("driver_locations").select("driver_id, latitude, longitude"),
+      supabase.from("orders").select("id, status, pickup_lng, pickup_lat, dropoff_lng, dropoff_lat, pickup_address, dropoff_address").in("status", ["pending", "accepted", "picked_up", "in_transit"]),
+    ]);
+    setMarkers([
+      ...(locs ?? []).map((l) => ({
+        id: `d-${l.driver_id}`,
+        lng: Number(l.longitude),
+        lat: Number(l.latitude),
+        kind: "driver" as const,
+        label: "Livreur",
+      })),
+      ...(orders ?? []).flatMap((o) => [
+        { id: `p-${o.id}`, lng: Number(o.pickup_lng), lat: Number(o.pickup_lat), kind: "pickup" as const, label: o.pickup_address },
+        { id: `x-${o.id}`, lng: Number(o.dropoff_lng), lat: Number(o.dropoff_lat), kind: "drop" as const, label: o.dropoff_address },
+      ]),
+    ]);
+  };
+
+  useEffect(() => {
+    load();
+    const ch = supabase
+      .channel("ops-map")
+      .on("postgres_changes", { event: "*", schema: "public", table: "driver_locations" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => load())
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, []);
+
+  return (
+    <DashboardLayout title="Carte live" subtitle="Livreurs, ramassage, destinataires">
+      <OpsMap markers={markers} className="h-[70vh]" pitch={55} />
+    </DashboardLayout>
+  );
+};
+
+export default AdminLiveMap;
