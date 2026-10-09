@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-import { HOME_BY_ROLE, pickPrimaryRole, type AppRole } from "@/lib/roles";
+import { HOME_BY_ROLE, fromVitaRole, pickPrimaryRole, type AppRole } from "@/lib/roles";
 
 export const getPostAuthPath = (roles: string[]) => {
   const primary = pickPrimaryRole(roles as AppRole[]);
@@ -8,16 +8,12 @@ export const getPostAuthPath = (roles: string[]) => {
 };
 
 export const fetchMyRoles = async () => {
-  let roles: string[] = [];
-  for (let i = 0; i < 4; i++) {
-    const { data, error } = await supabase.rpc("get_my_roles");
-    if (!error && data) {
-      roles = data.map((r: { role: string }) => r.role);
-      break;
-    }
-    await new Promise((r) => setTimeout(r, 500));
-  }
-  return roles;
+  const { data: session } = await supabase.auth.getUser();
+  const uid = session.user?.id;
+  if (!uid) return [];
+  const { data } = await supabase.from("users").select("role").eq("id", uid).maybeSingle();
+  if (data?.role) return [fromVitaRole(String(data.role))];
+  return ["client"];
 };
 
 export const signInWithGoogle = async () => {
