@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { HOME_BY_ROLE, MENU_BY_ROLE, ROLE_LABEL, isStaff } from "@/lib/roles";
+import { HOME_BY_ROLE, MENU_BY_ROLE, ROLE_LABEL } from "@/lib/roles";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -16,7 +16,7 @@ const DashboardLayout = ({ children, title, subtitle }: DashboardLayoutProps) =>
 
   const role = primaryRole ?? "client";
   const menuItems = MENU_BY_ROLE[role] ?? MENU_BY_ROLE.client;
-  const ops = isStaff(roles) || role === "livreur" || role === "entreprise";
+  const ops = true;
   const isActive = (href: string) =>
     href === "/admin" || href === "/entreprise" || href === "/livreur" || href === "/dashboard"
       ? location.pathname === href

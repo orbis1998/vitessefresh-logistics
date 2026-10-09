@@ -43,12 +43,12 @@ const OrdersList = () => {
       <div className="space-y-4">
         {loading ? (
           <div className="space-y-4 animate-pulse">
-            <div className="h-24 bg-secondary rounded-2xl" />
-            <div className="h-24 bg-secondary rounded-2xl" />
-            <div className="h-24 bg-secondary rounded-2xl" />
+            <div className="h-24 bg-white/5 rounded-2xl" />
+            <div className="h-24 bg-white/5 rounded-2xl" />
+            <div className="h-24 bg-white/5 rounded-2xl" />
           </div>
         ) : orders.length === 0 ? (
-          <div className="bg-card border border-border rounded-2xl p-12 text-center space-y-4 animate-in fade-in">
+          <div className="border border-white/10 rounded-2xl p-12 text-center space-y-4">
             <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
               <Package className="w-7 h-7 text-primary" />
             </div>
@@ -66,7 +66,7 @@ const OrdersList = () => {
               <Link
                 key={o.id}
                 to={`/dashboard/tracking?id=${o.id}`}
-                className="group block bg-card border border-border rounded-2xl p-5 hover:border-primary/30 transition-all animate-in fade-in slide-in-from-bottom-2 duration-300"
+                className="group block border border-white/10 rounded-2xl p-5 hover:border-primary/40 transition-all"
               >
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex-1 min-w-0">

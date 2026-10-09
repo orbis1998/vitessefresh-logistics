@@ -18,6 +18,7 @@ const AdminOrders = () => {
   const [filter, setFilter] = useState("all");
   const [assignments, setAssignments] = useState<Record<string, string>>({});
   const [selected, setSelected] = useState<any | null>(null);
+  const [analysis, setAnalysis] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
@@ -35,6 +36,15 @@ const AdminOrders = () => {
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    if (!selected?.id) {
+      setAnalysis(null);
+      return;
+    }
+    supabase.from("groq_analyses").select("*").eq("order_id", selected.id).order("created_at", { ascending: false }).limit(1).maybeSingle()
+      .then(({ data }) => setAnalysis(data));
+  }, [selected?.id]);
 
   const assignDriver = async (orderId: string) => {
     const order = orders.find((o) => o.id === orderId);
@@ -156,6 +166,21 @@ const AdminOrders = () => {
                 <p className="text-white/50">→ {selected.delivery_address}</p>
                 <p>Poids {selected.weight_kg ?? "—"} kg · {selected.package_description || "—"}</p>
                 <p className="text-white/40 text-xs">Le code de remise n’est pas affiché ici.</p>
+                {analysis && (
+                  <div className="rounded-lg bg-white/5 p-3 mt-2">
+                    <p className="text-xs text-primary">Analyse Groq</p>
+                    <p className="text-xs mt-1">{analysis.observations || analysis.hypotheses || "IA en échec → pas d’acceptation auto."}</p>
+                  </div>
+                )}
+                <Button size="sm" variant="outline" className="mt-2" onClick={async () => {
+                  const { data, error } = await supabase.functions.invoke("analyze-parcel", { body: { order_id: selected.id } });
+                  if (error || data?.error) toast({ title: "Groq", description: error?.message || data?.error, variant: "destructive" });
+                  else {
+                    toast({ title: data?.ok ? "Analyse IA enregistrée" : "IA indisponible → JAUNE" });
+                    const { data: row } = await supabase.from("groq_analyses").select("*").eq("order_id", selected.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+                    setAnalysis(row);
+                  }
+                }}>Analyser ce colis (IA)</Button>
               </>
             ) : (
               <p className="text-white/40">Sélectionnez une course.</p>

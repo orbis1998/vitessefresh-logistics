@@ -21,7 +21,7 @@ const Dashboard = () => {
         const st = (s: string) => String(s).toUpperCase();
         setStats({
           total: data.length,
-          in_progress: data.filter((o) => ["PENDING", "ACCEPTED", "ASSIGNED", "PICKED_UP", "IN_TRANSIT"].includes(st(o.status))).length,
+          in_progress: data.filter((o) => ["PENDING", "SUBMITTED", "ACCEPTED", "ASSIGNED", "PICKED_UP", "IN_TRANSIT"].includes(st(o.status))).length,
           delivered: data.filter((o) => st(o.status) === "DELIVERED").length,
           spent: data.filter((o) => st(o.status) === "DELIVERED").reduce((s, o) => s + Number(o.total_price ?? 0), 0),
         });
@@ -36,14 +36,14 @@ const Dashboard = () => {
   ];
 
   return (
-    <DashboardLayout title="Accueil" subtitle="Vos courses">
+    <DashboardLayout title="Accueil" subtitle="Vos courses Vita Express">
       <div className="space-y-6">
-        <div className="rounded-xl bg-[#111] text-white p-6 lg:p-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
+        <div className="rounded-2xl border border-white/10 bg-[#111] p-6 lg:p-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
           <div>
-            <p className="text-white/50 text-sm">Prochaine étape</p>
+            <p className="text-primary text-xs uppercase tracking-wider">Prochaine étape</p>
             <h2 className="font-heading text-2xl lg:text-3xl font-bold mt-1">Où va le colis ?</h2>
-            <p className="text-white/60 mt-2 max-w-md text-sm">
-              Indiquez ramassage et dépôt. Le tarif s'affiche avant confirmation.
+            <p className="text-white/55 mt-2 max-w-md text-sm">
+              Photo, type de colis, devis serveur, puis contrôle VERT / JAUNE / ROUGE.
             </p>
           </div>
           <Link to="/dashboard/order">
@@ -56,28 +56,22 @@ const Dashboard = () => {
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {cards.map((s) => (
-            <div key={s.label} className="bg-card rounded-xl border border-border p-5">
-              <p className="text-xs text-muted-foreground">{s.label}</p>
+            <div key={s.label} className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
+              <p className="text-xs text-white/40">{s.label}</p>
               <p className="font-heading text-2xl font-bold mt-2 tracking-tight">{s.value}</p>
-              <p className="text-xs text-muted-foreground mt-1">{s.hint}</p>
+              <p className="text-xs text-white/35 mt-1">{s.hint}</p>
             </div>
           ))}
         </div>
 
         <div className="grid sm:grid-cols-2 gap-3">
-          <Link
-            to="/dashboard/orders-list"
-            className="bg-card rounded-xl border border-border p-5 hover:border-foreground/30 transition-colors"
-          >
+          <Link to="/dashboard/orders-list" className="rounded-xl border border-white/10 bg-white/[0.03] p-5 hover:border-primary/40">
             <p className="font-heading font-semibold">Historique</p>
-            <p className="text-sm text-muted-foreground mt-1">Toutes vos commandes</p>
+            <p className="text-sm text-white/45 mt-1">Toutes vos commandes</p>
           </Link>
-          <Link
-            to="/dashboard/tracking"
-            className="bg-card rounded-xl border border-border p-5 hover:border-foreground/30 transition-colors"
-          >
-            <p className="font-heading font-semibold">Carte live</p>
-            <p className="text-sm text-muted-foreground mt-1">Position du livreur</p>
+          <Link to="/dashboard/tracking" className="rounded-xl border border-white/10 bg-white/[0.03] p-5 hover:border-primary/40">
+            <p className="font-heading font-semibold">Suivi live</p>
+            <p className="text-sm text-white/45 mt-1">Position du livreur</p>
           </Link>
         </div>
       </div>

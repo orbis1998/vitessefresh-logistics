@@ -76,6 +76,8 @@ const Orders = () => {
 
   /* --- Details --- */
   const [packageType, setPackageType] = useState("");
+  const [packageOther, setPackageOther] = useState("");
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [recipientName, setRecipientName] = useState("");
   const [recipientPhone, setRecipientPhone] = useState("");
@@ -215,7 +217,7 @@ const Orders = () => {
       distance: dist,
       base_price: 1500,
       total_price: total,
-      package_description: packageType || null,
+      package_description: (packageType === "Autre" ? packageOther : packageType) || null,
       special_instructions: notes || null,
       recipient_name: recipientName || null,
       recipient_phone: recipientPhone || null,
@@ -440,20 +442,66 @@ const Orders = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="packageType" className="text-muted-foreground text-xs uppercase tracking-wider">Nature / description</Label>
-                <Input id="packageType" placeholder="Documents, nourriture, vêtements..." className="bg-secondary border-border" value={packageType} onChange={(e) => setPackageType(e.target.value)} />
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Type de colis</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {["Documents", "Nourriture", "Vêtements", "Électronique", "Médicaments", "Autre"].map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setPackageType(t)}
+                      className={`rounded-xl border px-3 py-2 text-sm text-left ${
+                        packageType === t ? "border-primary bg-primary/15 text-primary" : "border-white/10 bg-white/5 text-white/70"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+                {packageType === "Autre" && (
+                  <Input placeholder="Précisez le type…" value={packageOther} onChange={(e) => setPackageOther(e.target.value)} className="bg-white/5 border-white/10" />
+                )}
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <Input placeholder="Poids kg" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} className="bg-secondary border-border" />
-                <Input placeholder="Valeur FC" value={declaredValue} onChange={(e) => setDeclaredValue(e.target.value)} className="bg-secondary border-border" />
-                <Input placeholder="L cm" value={lengthCm} onChange={(e) => setLengthCm(e.target.value)} className="bg-secondary border-border" />
-                <Input placeholder="l cm" value={widthCm} onChange={(e) => setWidthCm(e.target.value)} className="bg-secondary border-border" />
-                <Input placeholder="H cm" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} className="bg-secondary border-border" />
-                <label className="text-sm flex items-center gap-2"><input type="checkbox" checked={fragile} onChange={(e) => setFragile(e.target.checked)} /> Fragile</label>
+                <Input placeholder="Poids kg" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} className="bg-white/5 border-white/10" />
+                <Input placeholder="Valeur FC" value={declaredValue} onChange={(e) => setDeclaredValue(e.target.value)} className="bg-white/5 border-white/10" />
+                <Input placeholder="Longueur cm" value={lengthCm} onChange={(e) => setLengthCm(e.target.value)} className="bg-white/5 border-white/10" />
+                <Input placeholder="Largeur cm" value={widthCm} onChange={(e) => setWidthCm(e.target.value)} className="bg-white/5 border-white/10" />
+                <Input placeholder="Hauteur cm" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} className="bg-white/5 border-white/10" />
+                <label className="text-sm flex items-center gap-2 text-white/70"><input type="checkbox" checked={fragile} onChange={(e) => setFragile(e.target.checked)} /> Fragile</label>
               </div>
               <div className="space-y-2">
-                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Photo du colis (privée)</Label>
-                <Input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)} className="bg-secondary border-border" />
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Photo du colis</Label>
+                <p className="text-[11px] text-white/40">Prenez une photo (caméra) ou importez un fichier. Stockage privé.</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-center text-xs cursor-pointer hover:border-primary/40">
+                    Capturer
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0] ?? null;
+                        setPhotoFile(f);
+                        setPhotoPreview(f ? URL.createObjectURL(f) : null);
+                      }}
+                    />
+                  </label>
+                  <label className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-center text-xs cursor-pointer hover:border-primary/40">
+                    Importer
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0] ?? null;
+                        setPhotoFile(f);
+                        setPhotoPreview(f ? URL.createObjectURL(f) : null);
+                      }}
+                    />
+                  </label>
+                </div>
+                {photoPreview && <img src={photoPreview} alt="Colis" className="h-28 w-full object-cover rounded-xl border border-white/10" />}
               </div>
 
               <div className="space-y-2">
@@ -535,7 +583,7 @@ const Orders = () => {
               <div className="p-3 bg-primary/5 border border-primary/20 rounded-xl flex items-start gap-2.5">
                 <ShieldCheck className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                 <p className="text-xs text-muted-foreground">
-                  <strong className="text-foreground font-medium">Sécurité livraison :</strong> Un code PIN secret à 4 chiffres (OTP) sera généré automatiquement. Vous devrez le donner au livreur pour valider la réception.
+                  <strong className="text-foreground font-medium">Sécurité livraison :</strong> Un code de remise sera envoyé uniquement au destinataire par WhatsApp, au moment de la livraison.
                 </p>
               </div>
 
