@@ -10,9 +10,7 @@ const EntreprisePlan = () => {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data: mem } = await supabase.from("organization_members").select("organization_id").eq("user_id", user.id).maybeSingle();
-      if (!mem) return;
-      const { data } = await supabase.from("subscriptions").select("*").eq("organization_id", mem.organization_id).eq("status", "active").maybeSingle();
+      const { data } = await supabase.from("subscriptions").select("*").eq("user_id", user.id).eq("status", "active").maybeSingle();
       setSub(data);
     })();
   }, [user]);
@@ -23,7 +21,7 @@ const EntreprisePlan = () => {
         {sub ? (
           <>
             <p className="text-primary">{sub.status}</p>
-            <p className="font-heading text-2xl mt-2">{sub.credits_remaining} crédits restants</p>
+            <p className="font-heading text-2xl mt-2">{sub.deliveries_left ?? sub.credits_remaining ?? 0} livraisons restantes</p>
           </>
         ) : (
           <p className="text-white/50">Aucun forfait actif. Contactez finance Vita Express.</p>

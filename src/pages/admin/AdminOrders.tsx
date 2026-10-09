@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { canAssign } from "@/lib/assign";
+import { statusLabel, toVitaStatus } from "@/lib/status";
 
 const AdminOrders = () => {
   const { toast } = useToast();
@@ -19,133 +21,146 @@ const AdminOrders = () => {
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
-    const [{ data: ordersData }, { data: driverProfiles }, { data: profiles }] = await Promise.all([
+    const [{ data: ordersData }, { data: dps }, { data: people }] = await Promise.all([
       supabase.from("orders").select("*").order("created_at", { ascending: false }).limit(200),
-      supabase.from("driver_profiles").select("user_id, approved, status").eq("approved", true),
-      supabase.from("profiles").select("user_id, full_name, email"),
+      supabase.from("driver_profiles").select("user_id, available"),
+      supabase.from("users").select("id, name, email"),
     ]);
-    const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
+    const map = new Map((people ?? []).map((p) => [p.id, p]));
     setOrders(ordersData ?? []);
-    setDrivers((driverProfiles ?? []).map((d) => ({ ...d, profile: profileMap.get(d.user_id) })));
+    setDrivers((dps ?? []).map((d) => ({ ...d, profile: map.get(d.user_id) })));
     setLoading(false);
   };
 
   useEffect(() => {
     load();
-    const ch = supabase.channel("ops-orders").on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => load()).subscribe();
-    return () => {
-      supabase.removeChannel(ch);
-    };
   }, []);
 
   const assignDriver = async (orderId: string) => {
+    const order = orders.find((o) => o.id === orderId);
+    const check = canAssign(order?.status ?? "", order?.evaluation_level ?? "GREEN");
+    if (!check.ok) {
+      toast({ title: "Attribution refusée", description: check.reason ?? "", variant: "destructive" });
+      return;
+    }
     const driverId = assignments[orderId];
     if (!driverId) {
       toast({ title: "Choisissez un livreur", variant: "destructive" });
       return;
     }
-    const { error } = await supabase.from("orders").update({ driver_id: driverId, status: "accepted", accepted_at: new Date().toISOString() }).eq("id", orderId);
-    if (error) toast({ title: "Erreur", description: error.message, variant: "destructive" });
-    else {
-      await supabase.from("driver_profiles").update({ status: "busy" }).eq("user_id", driverId);
-      if (user) {
-        await supabase.from("audit_logs").insert({ actor_id: user.id, action: "assign_driver", entity: "order", entity_id: orderId });
-      }
-      const { data: dprof } = await supabase.from("profiles").select("phone").eq("user_id", driverId).maybeSingle();
-      if (dprof?.phone) {
-        await supabase.from("whatsapp_messages").insert({
-          phone: dprof.phone,
-          body: "Vita Express : nouvelle mission. Ouvrez l’app livreur.",
-          kind: "mission",
-          order_id: orderId,
-        });
-      }
-      toast({ title: "Livreur affecté" });
-      load();
+    const { data, error } = await supabase.functions.invoke("assign-driver", { body: { order_id: orderId, driver_id: driverId } });
+    if (error || data?.error) {
+      toast({ title: "Erreur", description: error?.message || data?.error, variant: "destructive" });
+      return;
     }
+    if (user) await supabase.from("audit_events").insert({ actor_id: user.id, action: "assign_driver", entity: "order", entity_id: orderId });
+    toast({ title: "Livreur affecté" });
+    load();
   };
 
-  const shown = filter === "all" ? orders : orders.filter((o) => o.status === filter);
+  const accept = async (order: any) => {
+    if (order.evaluation_level === "RED") {
+      toast({ title: "Contrôle rouge", description: "Attribution et acceptation interdites.", variant: "destructive" });
+      return;
+    }
+    if (order.evaluation_level === "YELLOW") {
+      toast({ title: "Contrôle jaune", description: "Validez d’abord le contrôle (bouton Vert).", variant: "destructive" });
+      return;
+    }
+    await supabase.from("orders").update({ status: "ACCEPTED" }).eq("id", order.id);
+    if (user) await supabase.from("audit_events").insert({ actor_id: user.id, action: "accept_order", entity: "order", entity_id: order.id });
+    load();
+  };
+
+  const forceGreen = async (order: any) => {
+    if (order.evaluation_level === "RED") {
+      toast({ title: "Rouge non levable sans nouvelle évaluation", variant: "destructive" });
+      return;
+    }
+    await supabase.from("orders").update({ evaluation_level: "GREEN", status: "ACCEPTED" }).eq("id", order.id);
+    if (user) await supabase.from("audit_events").insert({ actor_id: user.id, action: "human_validate", entity: "order", entity_id: order.id });
+    toast({ title: "Contrôle validé (humain)" });
+    load();
+  };
+
+  const shown = filter === "all" ? orders : orders.filter((o) => toVitaStatus(o.status) === filter);
 
   return (
-    <DashboardLayout title="Commandes" subtitle="Affectation et suivi">
+    <DashboardLayout title="Commandes" subtitle="Évaluation et affectation">
       <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
-      <div className="flex gap-2 flex-wrap">
-        {["all", "pending", "accepted", "in_transit", "delivered"].map((s) => (
-          <button
-            key={s}
-            onClick={() => setFilter(s)}
-            className={`rounded-full px-3 py-1 text-xs ${filter === s ? "bg-primary text-black" : "bg-white/5 text-white/60"}`}
-          >
-            {s === "all" ? "Toutes" : s}
-          </button>
-        ))}
-      </div>
+        <div className="flex gap-2 flex-wrap">
+          {["all", "PENDING", "ACCEPTED", "IN_TRANSIT", "DELIVERED", "REJECTED"].map((s) => (
+            <button key={s} onClick={() => setFilter(s)} className={`rounded-full px-3 py-1 text-xs ${filter === s ? "bg-primary text-black" : "bg-white/5 text-white/60"}`}>
+              {s === "all" ? "Toutes" : s}
+            </button>
+          ))}
+        </div>
         <Button asChild size="sm" variant="outline"><Link to="/dashboard/order">Nouvelle course</Link></Button>
       </div>
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
       ) : (
         <div className="grid lg:grid-cols-5 gap-4">
-        <div className="lg:col-span-3 rounded-xl border border-white/10 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-white/5 text-white/45">
-              <tr>
-                <th className="text-left p-3">Trajet</th>
-                <th className="text-left p-3">Statut</th>
-                <th className="text-left p-3">Prix</th>
-                <th className="text-left p-3">Paiement</th>
-                <th className="text-left p-3">OTP</th>
-                <th className="text-right p-3">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {shown.map((o) => (
-                <tr key={o.id} className={`border-t border-white/10 cursor-pointer ${selected?.id === o.id ? "bg-primary/10" : ""}`} onClick={() => setSelected(o)}>
-                  <td className="p-3 max-w-xs">
-                    <p className="truncate">{o.pickup_address}</p>
-                    <p className="truncate text-white/40 text-xs">→ {o.dropoff_address}</p>
-                  </td>
-                  <td className="p-3 text-primary">{o.status}</td>
-                  <td className="p-3">{Number(o.price).toLocaleString("fr-FR")} FC</td>
-                  <td className="p-3 text-white/55">{o.payment_method || "cash"} · {o.payment_status || "—"}</td>
-                  <td className="p-3 font-mono text-xs">{o.delivery_otp || "—"}</td>
-                  <td className="p-3 text-right">
-                    {o.status === "pending" && (
-                      <div className="flex justify-end gap-2">
-                        <Select onValueChange={(v) => setAssignments((a) => ({ ...a, [o.id]: v }))}>
-                          <SelectTrigger className="h-8 w-36 bg-white/5 border-white/10"><SelectValue placeholder="Livreur" /></SelectTrigger>
-                          <SelectContent>
-                            {drivers.map((d) => (
-                              <SelectItem key={d.user_id} value={d.user_id}>{d.profile?.full_name || d.profile?.email || d.user_id.slice(0, 6)}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button size="sm" onClick={() => assignDriver(o.id)}>Affecter</Button>
-                      </div>
-                    )}
-                  </td>
+          <div className="lg:col-span-3 rounded-xl border border-white/10 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-white/5 text-white/45">
+                <tr>
+                  <th className="text-left p-3">Trajet</th>
+                  <th className="text-left p-3">Statut</th>
+                  <th className="text-left p-3">Contrôle</th>
+                  <th className="text-left p-3">Prix</th>
+                  <th className="text-right p-3">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="lg:col-span-2 rounded-xl border border-white/10 p-4 text-sm space-y-2">
-          {selected ? (
-            <>
-              <p className="text-xs text-primary uppercase">{selected.status}</p>
-              <p>{selected.pickup_address}</p>
-              <p className="text-white/50">→ {selected.dropoff_address}</p>
-              <p>Destinataire : {selected.recipient_name || "—"} · {selected.recipient_phone || "—"}</p>
-              <p>OTP : <span className="font-mono">{selected.delivery_otp || "—"}</span></p>
-              <p>Paiement : {selected.payment_method || "cash"} · {selected.payment_status || "—"}</p>
-              <p>K-Pay : {selected.kpay_status || "—"}</p>
-              <p className="text-primary font-heading text-lg">{Number(selected.price).toLocaleString("fr-FR")} FC</p>
-            </>
-          ) : (
-            <p className="text-white/40">Sélectionnez une course.</p>
-          )}
-        </div>
+              </thead>
+              <tbody>
+                {shown.map((o) => (
+                  <tr key={o.id} className={`border-t border-white/10 cursor-pointer ${selected?.id === o.id ? "bg-primary/10" : ""}`} onClick={() => setSelected(o)}>
+                    <td className="p-3 max-w-xs">
+                      <p className="truncate">{o.pickup_address}</p>
+                      <p className="truncate text-white/40 text-xs">→ {o.delivery_address}</p>
+                    </td>
+                    <td className="p-3 text-primary">{statusLabel(o.status)}</td>
+                    <td className="p-3">{o.evaluation_level || "—"}</td>
+                    <td className="p-3">{Number(o.total_price ?? 0).toLocaleString("fr-FR")} FC</td>
+                    <td className="p-3 text-right" onClick={(e) => e.stopPropagation()}>
+                      {o.evaluation_level === "YELLOW" && (
+                        <Button size="sm" variant="outline" onClick={() => forceGreen(o)}>Valider (vert)</Button>
+                      )}
+                      {["PENDING", "SUBMITTED", "PENDING_VALIDATION"].includes(toVitaStatus(o.status)) && o.evaluation_level !== "YELLOW" && (
+                        <Button size="sm" variant="outline" onClick={() => accept(o)}>Accepter</Button>
+                      )}
+                      {toVitaStatus(o.status) === "ACCEPTED" && (
+                        <div className="flex justify-end gap-2">
+                          <Select onValueChange={(v) => setAssignments((a) => ({ ...a, [o.id]: v }))}>
+                            <SelectTrigger className="h-8 w-36 bg-white/5 border-white/10"><SelectValue placeholder="Livreur" /></SelectTrigger>
+                            <SelectContent>
+                              {drivers.map((d) => (
+                                <SelectItem key={d.user_id} value={d.user_id}>{d.profile?.name || d.profile?.email || d.user_id.slice(0, 6)}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button size="sm" onClick={() => assignDriver(o.id)}>Affecter</Button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="lg:col-span-2 rounded-xl border border-white/10 p-4 text-sm space-y-2">
+            {selected ? (
+              <>
+                <p className="text-xs text-primary uppercase">{statusLabel(selected.status)} · {selected.evaluation_level || "sans contrôle"}</p>
+                <p>{selected.pickup_address}</p>
+                <p className="text-white/50">→ {selected.delivery_address}</p>
+                <p>Poids {selected.weight_kg ?? "—"} kg · {selected.package_description || "—"}</p>
+                <p className="text-white/40 text-xs">Le code de remise n’est pas affiché ici.</p>
+              </>
+            ) : (
+              <p className="text-white/40">Sélectionnez une course.</p>
+            )}
+          </div>
         </div>
       )}
     </DashboardLayout>

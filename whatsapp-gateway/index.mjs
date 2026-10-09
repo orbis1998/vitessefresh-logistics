@@ -23,27 +23,29 @@ client.on("qr", (qr) => {
 });
 
 client.on("ready", () => {
-  console.log("WhatsApp connecté. Polling des messages pending…");
+  console.log("WhatsApp connecté. Polling de l’outbox notifications…");
 });
 
 const sendPending = async () => {
   const { data } = await supabase
-    .from("whatsapp_messages")
-    .select("*")
+    .from("notifications")
+    .select("id, phone, body, event_key, status")
     .eq("status", "pending")
+    .eq("channel", "whatsapp")
     .limit(10);
   for (const row of data ?? []) {
     const chat = `${String(row.phone).replace(/\D/g, "")}@c.us`;
     try {
       await client.sendMessage(chat, row.body);
       await supabase
-        .from("whatsapp_messages")
+        .from("notifications")
         .update({ status: "sent", sent_at: new Date().toISOString(), error: null })
         .eq("id", row.id);
-      console.log("envoyé", row.phone, row.kind);
+      const kind = String(row.event_key || "").startsWith("otp-") ? "otp" : row.event_key;
+      console.log("envoyé", row.phone, kind);
     } catch (err) {
       await supabase
-        .from("whatsapp_messages")
+        .from("notifications")
         .update({ status: "error", error: String(err?.message || err) })
         .eq("id", row.id);
     }

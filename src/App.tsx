@@ -45,6 +45,7 @@ import Terms from "./pages/legal/Terms";
 import Mentions from "./pages/legal/Mentions";
 import Cookies from "./pages/legal/Cookies";
 import NotFound from "./pages/NotFound";
+import CookieBanner from "./components/CookieBanner";
 
 const queryClient = new QueryClient();
 
@@ -107,6 +108,7 @@ const App = () => (
 
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <CookieBanner />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

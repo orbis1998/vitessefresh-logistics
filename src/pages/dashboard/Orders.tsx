@@ -16,7 +16,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useMapboxToken } from "@/hooks/useMapboxToken";
 import { haversineKm, computePriceFC } from "@/lib/distance";
 import { useToast } from "@/hooks/use-toast";
-import { generateDeliveryOtp, detectMobileMoneyOperator, normalizeDrcPhone } from "@/lib/flexpay";
+import { detectMobileMoneyOperator, normalizeDrcPhone } from "@/lib/flexpay";
 
 interface Location {
   address: string;
@@ -81,6 +81,13 @@ const Orders = () => {
   const [recipientPhone, setRecipientPhone] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "kpay">("cash");
   const [paymentPhone, setPaymentPhone] = useState("");
+  const [weightKg, setWeightKg] = useState("");
+  const [lengthCm, setLengthCm] = useState("");
+  const [widthCm, setWidthCm] = useState("");
+  const [heightCm, setHeightCm] = useState("");
+  const [declaredValue, setDeclaredValue] = useState("");
+  const [fragile, setFragile] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
 
   const distance = pickup && dropoff ? haversineKm(pickup.lat, pickup.lng, dropoff.lat, dropoff.lng) : 0;
@@ -176,39 +183,69 @@ const Orders = () => {
     }
 
     setLoading(true);
-    const deliveryOtp = generateDeliveryOtp();
-    const { data: mem } = await supabase
-      .from("organization_members")
-      .select("organization_id")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    const { data: quote, error: quoteErr } = await supabase.functions.invoke("quote-order", {
+      body: {
+        pickup_lat: pickup.lat,
+        pickup_lng: pickup.lng,
+        delivery_lat: dropoff.lat,
+        delivery_lng: dropoff.lng,
+        weight_kg: weightKg ? Number(weightKg) : null,
+        length_cm: lengthCm ? Number(lengthCm) : null,
+        width_cm: widthCm ? Number(widthCm) : null,
+        height_cm: heightCm ? Number(heightCm) : null,
+      },
+    });
+    if (quoteErr || quote?.blocked || quote?.error) {
+      setLoading(false);
+      toast({ title: "Hors zone ou devis refusé", description: quote?.error || quoteErr?.message, variant: "destructive" });
+      return;
+    }
+    const total = quote?.totalFc ?? price;
+    const dist = quote?.distanceKm ?? Number(distance.toFixed(2));
+    const { data: me } = await supabase.from("users").select("company_id, name, phone").eq("id", user.id).maybeSingle();
 
     const { data: created, error } = await supabase.from("orders").insert({
       client_id: user.id,
       pickup_address: pickup.address,
       pickup_lat: pickup.lat,
       pickup_lng: pickup.lng,
-      dropoff_address: dropoff.address,
-      dropoff_lat: dropoff.lat,
-      dropoff_lng: dropoff.lng,
-      distance_km: Number(distance.toFixed(2)),
-      price,
-      package_type: packageType || null,
-      notes: notes || null,
+      delivery_address: dropoff.address,
+      delivery_lat: dropoff.lat,
+      delivery_lng: dropoff.lng,
+      distance: dist,
+      base_price: 1500,
+      total_price: total,
+      package_description: packageType || null,
+      special_instructions: notes || null,
       recipient_name: recipientName || null,
       recipient_phone: recipientPhone || null,
-      status: "pending",
-      delivery_otp: deliveryOtp,
-      organization_id: mem?.organization_id ?? null,
+      sender_name: me?.name ?? user.user_metadata?.full_name ?? null,
+      sender_phone: me?.phone ?? user.user_metadata?.phone ?? null,
+      company_id: me?.company_id ?? null,
+      pricing_version: quote?.version ?? null,
+      weight_kg: weightKg ? Number(weightKg) : null,
+      length_cm: lengthCm ? Number(lengthCm) : null,
+      width_cm: widthCm ? Number(widthCm) : null,
+      height_cm: heightCm ? Number(heightCm) : null,
+      declared_value_fc: declaredValue ? Number(declaredValue) : null,
+      fragile,
+      declared_confirmed: true,
+      status: "SUBMITTED",
+      quote_snapshot: quote ?? null,
       payment_method: paymentMethod === "cash" ? "cash" : "kpay",
       payment_status: paymentMethod === "cash" ? "cash_on_delivery" : "pending",
-      payment_phone: paymentMethod === "kpay" ? normalizeDrcPhone(paymentPhone) : null,
     }).select("id").single();
     if (error || !created) {
       setLoading(false);
       toast({ title: "Erreur", description: error?.message, variant: "destructive" });
       return;
     }
+    if (photoFile) {
+      const path = `${user.id}/${created.id}/main.jpg`;
+      const { error: upErr } = await supabase.storage.from("parcel-photos").upload(path, photoFile, { upsert: true, contentType: photoFile.type });
+      if (!upErr) await supabase.from("parcel_photos").insert({ order_id: created.id, storage_path: path, kind: "main" });
+    }
+    await supabase.functions.invoke("evaluate-order", { body: { order_id: created.id } });
     if (paymentMethod === "kpay") {
       const { error: payErr } = await supabase.functions.invoke("kpay-initiate", {
         body: {
@@ -225,7 +262,7 @@ const Orders = () => {
     setLoading(false);
     toast({
       title: "Commande créée avec succès",
-      description: `Code OTP de livraison : ${deliveryOtp}. Il vous sera demandé à l'arrivée du livreur.`,
+      description: "Le code de remise sera envoyé uniquement au destinataire au moment de la livraison.",
     });
     navigate("/dashboard");
   };
@@ -403,8 +440,20 @@ const Orders = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="packageType" className="text-muted-foreground text-xs uppercase tracking-wider">Type de colis</Label>
+                <Label htmlFor="packageType" className="text-muted-foreground text-xs uppercase tracking-wider">Nature / description</Label>
                 <Input id="packageType" placeholder="Documents, nourriture, vêtements..." className="bg-secondary border-border" value={packageType} onChange={(e) => setPackageType(e.target.value)} />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Input placeholder="Poids kg" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} className="bg-secondary border-border" />
+                <Input placeholder="Valeur FC" value={declaredValue} onChange={(e) => setDeclaredValue(e.target.value)} className="bg-secondary border-border" />
+                <Input placeholder="L cm" value={lengthCm} onChange={(e) => setLengthCm(e.target.value)} className="bg-secondary border-border" />
+                <Input placeholder="l cm" value={widthCm} onChange={(e) => setWidthCm(e.target.value)} className="bg-secondary border-border" />
+                <Input placeholder="H cm" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} className="bg-secondary border-border" />
+                <label className="text-sm flex items-center gap-2"><input type="checkbox" checked={fragile} onChange={(e) => setFragile(e.target.checked)} /> Fragile</label>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Photo du colis (privée)</Label>
+                <Input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)} className="bg-secondary border-border" />
               </div>
 
               <div className="space-y-2">

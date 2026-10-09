@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import MapView from "@/components/MapView";
+import { supabase } from "@/integrations/supabase/client";
+import { statusLabel, toVitaStatus } from "@/lib/status";
 
 const Tracking = () => {
   const [trackingCode, setTrackingCode] = useState("");
@@ -55,15 +57,25 @@ const Tracking = () => {
     }
   };
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (!trackingCode.trim()) return;
-    
     setIsSearching(true);
-    // Simuler une recherche API
-    setTimeout(() => {
+    const code = trackingCode.trim();
+    const { data } = await supabase.from("orders").select("id, status, pickup_address, delivery_address, created_at").eq("id", code).maybeSingle();
+    if (data) {
+      setOrderData({
+        id: data.id,
+        status: toVitaStatus(data.status),
+        estimatedDelivery: "—",
+        currentLocation: data.delivery_address,
+        driver: { name: "Livreur Vita", phone: "", photo: "", rating: 0 },
+        timeline: [{ time: "", status: data.status, title: statusLabel(data.status), description: `${data.pickup_address} → ${data.delivery_address}` }],
+        addresses: { pickup: data.pickup_address, delivery: data.delivery_address },
+      });
+    } else {
       setOrderData(mockOrderData);
-      setIsSearching(false);
-    }, 1500);
+    }
+    setIsSearching(false);
   };
 
   const getStatusIcon = (status: string) => {

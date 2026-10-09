@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { statusLabel, toVitaStatus } from "@/lib/status";
 
 const EntrepriseDashboard = () => {
   const { user } = useAuth();
@@ -13,12 +14,13 @@ const EntrepriseDashboard = () => {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data: mem } = await supabase.from("organization_members").select("organization_id").eq("user_id", user.id).maybeSingle();
-      if (!mem) return;
+      const { data: me } = await supabase.from("users").select("company_id").eq("id", user.id).maybeSingle();
+      const companyId = me?.company_id;
+      if (!companyId) return;
       const [{ data: o }, { data: ords }, { data: s }] = await Promise.all([
-        supabase.from("organizations").select("*").eq("id", mem.organization_id).maybeSingle(),
-        supabase.from("orders").select("*").eq("organization_id", mem.organization_id).order("created_at", { ascending: false }).limit(20),
-        supabase.from("subscriptions").select("*").eq("organization_id", mem.organization_id).eq("status", "active").maybeSingle(),
+        supabase.from("companies").select("*").eq("id", companyId).maybeSingle(),
+        supabase.from("orders").select("*").eq("company_id", companyId).order("created_at", { ascending: false }).limit(20),
+        supabase.from("subscriptions").select("*").eq("user_id", user.id).eq("status", "active").maybeSingle(),
       ]);
       setOrg(o);
       setOrders(ords ?? []);
@@ -26,7 +28,7 @@ const EntrepriseDashboard = () => {
     })();
   }, [user]);
 
-  const gmv = orders.filter((o) => o.status === "delivered").reduce((s, o) => s + Number(o.price), 0);
+  const gmv = orders.filter((o) => toVitaStatus(o.status) === "DELIVERED").reduce((s, o) => s + Number(o.total_price ?? 0), 0);
 
   return (
     <DashboardLayout title={org?.name || "Entreprise"} subtitle="Volume, forfait, courses">
@@ -40,8 +42,8 @@ const EntrepriseDashboard = () => {
           <p className="font-heading text-2xl font-bold mt-1 text-primary">{gmv.toLocaleString("fr-FR")} FC</p>
         </div>
         <div className="rounded-xl border border-white/10 p-4">
-          <p className="text-xs text-white/40">Crédits forfait</p>
-          <p className="font-heading text-2xl font-bold mt-1">{sub?.credits_remaining ?? "—"}</p>
+          <p className="text-xs text-white/40">Livraisons restantes</p>
+          <p className="font-heading text-2xl font-bold mt-1">{sub?.deliveries_left ?? sub?.credits_remaining ?? "—"}</p>
         </div>
       </div>
       <div className="flex gap-3 mb-6">
@@ -60,9 +62,9 @@ const EntrepriseDashboard = () => {
           <tbody>
             {orders.map((o) => (
               <tr key={o.id} className="border-t border-white/10">
-                <td className="p-3 truncate max-w-xs">{o.pickup_address} → {o.dropoff_address}</td>
-                <td className="p-3 text-primary">{o.status}</td>
-                <td className="p-3 text-right">{Number(o.price).toLocaleString("fr-FR")} FC</td>
+                <td className="p-3 truncate max-w-xs">{o.pickup_address} → {o.delivery_address}</td>
+                <td className="p-3 text-primary">{statusLabel(o.status)}</td>
+                <td className="p-3 text-right">{Number(o.total_price ?? 0).toLocaleString("fr-FR")} FC</td>
               </tr>
             ))}
           </tbody>

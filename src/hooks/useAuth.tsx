@@ -8,7 +8,7 @@ import {
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-import { pickPrimaryRole, type AppRole } from "@/lib/roles";
+import { fromVitaRole, pickPrimaryRole, type AppRole } from "@/lib/roles";
 
 export type { AppRole };
 
@@ -31,19 +31,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchRoles = async () => {
-    for (let i = 0; i < 4; i++) {
-      const { data, error } = await supabase.rpc("get_my_roles");
-
-      if (!error) {
-        setRoles((data ?? []).map((r: { role: AppRole }) => r.role));
-        return;
-      }
-
-      await new Promise((r) => setTimeout(r, 800));
+  const fetchRoles = async (userId?: string) => {
+    const uid = userId ?? (await supabase.auth.getUser()).data.user?.id;
+    if (!uid) {
+      setRoles([]);
+      return;
     }
-
-    setRoles([]);
+    const { data } = await supabase.from("users").select("role").eq("id", uid).maybeSingle();
+    if (data?.role) {
+      setRoles([fromVitaRole(data.role as string)]);
+      return;
+    }
+    setRoles(["client"]);
   };
 
   useEffect(() => {
@@ -55,7 +54,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (newSession?.user) {
           setTimeout(() => {
-            fetchRoles().finally(() => setLoading(false));
+            fetchRoles(newSession.user.id).finally(() => setLoading(false));
           }, 0);
         } else {
           setRoles([]);
@@ -68,7 +67,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchRoles().finally(() => setLoading(false));
+        fetchRoles(session.user.id).finally(() => setLoading(false));
       } else {
         setLoading(false);
       }
@@ -86,7 +85,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const primaryRole: AppRole | null = pickPrimaryRole(roles);
 
   const refreshRoles = async () => {
-    if (user) await fetchRoles();
+    if (user) await fetchRoles(user.id);
   };
 
   return (

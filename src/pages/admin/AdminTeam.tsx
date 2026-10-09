@@ -5,11 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { ROLE_LABEL, STAFF_ROLES_CREATABLE, type AppRole } from "@/lib/roles";
+import { ROLE_LABEL, STAFF_ROLES_CREATABLE, fromVitaRole, type AppRole } from "@/lib/roles";
 
 const AdminTeam = () => {
   const { toast } = useToast();
-  const [rows, setRows] = useState<{ user_id: string; email: string | null; full_name: string | null; roles: string[] }[]>([]);
+  const [rows, setRows] = useState<any[]>([]);
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
@@ -18,21 +18,11 @@ const AdminTeam = () => {
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
-    const [{ data: profiles }, { data: roles }] = await Promise.all([
-      supabase.from("profiles").select("user_id, full_name, email"),
-      supabase.from("user_roles").select("user_id, role"),
-    ]);
-    const map = new Map<string, string[]>();
-    (roles ?? []).forEach((r) => {
-      const arr = map.get(r.user_id) ?? [];
-      arr.push(r.role);
-      map.set(r.user_id, arr);
-    });
-    setRows(
-      (profiles ?? [])
-        .map((p) => ({ ...p, roles: map.get(p.user_id) ?? [] }))
-        .filter((p) => p.roles.some((r) => r !== "client"))
-    );
+    const { data } = await supabase.from("users").select("id, name, email, role").order("created_at", { ascending: false }).limit(200);
+    setRows((data ?? []).filter((u) => {
+      const r = fromVitaRole(u.role);
+      return r && r !== "client";
+    }));
     setLoading(false);
   };
 
@@ -62,7 +52,7 @@ const AdminTeam = () => {
   };
 
   return (
-    <DashboardLayout title="Équipe" subtitle="Créer call center, finance, suivi…">
+    <DashboardLayout title="Équipe" subtitle="Comptes staff (users.role Vita)">
       <div className="grid lg:grid-cols-5 gap-6">
         <div className="lg:col-span-2 rounded-xl border border-white/10 bg-white/[0.03] p-5 space-y-3">
           <p className="font-heading font-semibold">Nouveau compte</p>
@@ -85,15 +75,15 @@ const AdminTeam = () => {
                 <tr>
                   <th className="text-left p-3">Nom</th>
                   <th className="text-left p-3">Email</th>
-                  <th className="text-left p-3">Rôles</th>
+                  <th className="text-left p-3">Rôle</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.user_id} className="border-t border-white/10">
-                    <td className="p-3">{r.full_name || "—"}</td>
+                  <tr key={r.id} className="border-t border-white/10">
+                    <td className="p-3">{r.name || "—"}</td>
                     <td className="p-3 text-white/60">{r.email}</td>
-                    <td className="p-3 text-primary">{r.roles.map((x) => ROLE_LABEL[x as AppRole] ?? x).join(", ")}</td>
+                    <td className="p-3 text-primary">{ROLE_LABEL[fromVitaRole(r.role) as AppRole] ?? r.role}</td>
                   </tr>
                 ))}
               </tbody>

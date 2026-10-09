@@ -16,7 +16,7 @@ const AdminOrgs = () => {
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
-    const { data } = await supabase.from("organizations").select("*").order("created_at", { ascending: false });
+    const { data } = await supabase.from("companies").select("*").order("created_at", { ascending: false });
     setRows(data ?? []);
     if (!orgId && data?.[0]) setOrgId(data[0].id);
     setLoading(false);
@@ -28,7 +28,7 @@ const AdminOrgs = () => {
 
   const create = async () => {
     if (!name.trim()) return;
-    const { error } = await supabase.from("organizations").insert({ name: name.trim(), contact_email: email || null });
+    const { error } = await supabase.from("companies").insert({ name: name.trim(), contact_email: email || null });
     if (error) toast({ title: "Erreur", description: error.message, variant: "destructive" });
     else {
       toast({ title: "Entreprise ajoutée" });
@@ -40,23 +40,23 @@ const AdminOrgs = () => {
 
   const addMember = async () => {
     if (!orgId || !memberEmail.trim()) return;
-    const { data: profile } = await supabase.from("profiles").select("user_id").eq("email", memberEmail.trim()).maybeSingle();
+    const { data: profile } = await supabase.from("users").select("id").eq("email", memberEmail.trim()).maybeSingle();
     if (!profile) {
-      toast({ title: "Profil introuvable", description: memberEmail, variant: "destructive" });
+      toast({ title: "Utilisateur introuvable", description: memberEmail, variant: "destructive" });
       return;
     }
-    const { error } = await supabase.from("organization_members").insert({ organization_id: orgId, user_id: profile.user_id });
+    const { error } = await supabase.from("company_members").insert({ company_id: orgId, user_id: profile.id });
     if (error) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
       return;
     }
-    await supabase.from("user_roles").upsert({ user_id: profile.user_id, role: "entreprise" }, { onConflict: "user_id,role" });
-    toast({ title: "Membre ajouté" });
+    await supabase.from("users").update({ role: "ENTREPRISE", company_id: orgId }).eq("id", profile.id);
+    toast({ title: "Membre lié" });
     setMemberEmail("");
   };
 
   return (
-    <DashboardLayout title="Entreprises" subtitle="Comptes société et forfaits volume">
+    <DashboardLayout title="Entreprises" subtitle="Comptes société (table companies)">
       <div className="flex gap-2 mb-4 max-w-xl flex-wrap">
         <Input placeholder="Nom de l’entreprise" value={name} onChange={(e) => setName(e.target.value)} className="bg-white/5 border-white/10 flex-1 min-w-[160px]" />
         <Input placeholder="Email contact" value={email} onChange={(e) => setEmail(e.target.value)} className="bg-white/5 border-white/10 flex-1 min-w-[160px]" />

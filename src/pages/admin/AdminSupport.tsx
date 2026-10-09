@@ -16,7 +16,7 @@ const AdminSupport = () => {
   const load = async () => {
     const [{ data: t }, { data: w }] = await Promise.all([
       supabase.from("support_threads").select("*").order("updated_at", { ascending: false }),
-      supabase.from("whatsapp_messages").select("*").order("created_at", { ascending: false }).limit(20),
+      supabase.from("notifications").select("id, status, event_key, phone").order("created_at", { ascending: false }).limit(20),
     ]);
     setThreads(t ?? []);
     setWa(w ?? []);
@@ -41,7 +41,7 @@ const AdminSupport = () => {
   };
 
   return (
-    <DashboardLayout title="Support" subtitle="Tickets et file WhatsApp">
+    <DashboardLayout title="Support" subtitle="Tickets et file notifications">
       <div className="grid lg:grid-cols-5 gap-4">
         <ul className="lg:col-span-2 space-y-2">
           {threads.map((t) => (
@@ -65,10 +65,10 @@ const AdminSupport = () => {
             <Button onClick={send}>Envoyer</Button>
           </div>
           <div className="rounded-xl border border-white/10 p-3">
-            <p className="text-xs uppercase tracking-wider text-white/40 mb-2">WhatsApp outbox</p>
+            <p className="text-xs uppercase tracking-wider text-white/40 mb-2">Outbox</p>
             <ul className="text-xs space-y-1 text-white/55">
               {wa.map((w) => (
-                <li key={w.id}>{w.status} · {w.kind} · {w.phone}</li>
+                <li key={w.id}>{w.status} · {String(w.event_key).startsWith("otp-") ? "otp" : w.event_key} · {w.phone}</li>
               ))}
             </ul>
           </div>

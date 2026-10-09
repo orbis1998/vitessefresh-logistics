@@ -14,15 +14,16 @@ const Dashboard = () => {
     if (!user) return;
     supabase
       .from("orders")
-      .select("status, price")
+      .select("status, total_price")
       .eq("client_id", user.id)
       .then(({ data }) => {
         if (!data) return;
+        const st = (s: string) => String(s).toUpperCase();
         setStats({
           total: data.length,
-          in_progress: data.filter((o) => ["pending", "accepted", "picked_up", "in_transit"].includes(o.status)).length,
-          delivered: data.filter((o) => o.status === "delivered").length,
-          spent: data.filter((o) => o.status === "delivered").reduce((s, o) => s + Number(o.price), 0),
+          in_progress: data.filter((o) => ["PENDING", "ACCEPTED", "ASSIGNED", "PICKED_UP", "IN_TRANSIT"].includes(st(o.status))).length,
+          delivered: data.filter((o) => st(o.status) === "DELIVERED").length,
+          spent: data.filter((o) => st(o.status) === "DELIVERED").reduce((s, o) => s + Number(o.total_price ?? 0), 0),
         });
       });
   }, [user]);

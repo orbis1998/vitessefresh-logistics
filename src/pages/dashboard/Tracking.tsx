@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   Loader2, Package, Phone, Navigation, RefreshCw, AlertCircle, CheckCircle2,
-  ArrowRight, Clock, KeyRound, Copy, Check, Share2, ShieldCheck, Banknote, Smartphone
+  ArrowRight, Clock, Share2, ShieldCheck, Banknote, Smartphone
 } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -14,12 +14,18 @@ import { useMapboxToken } from "@/hooks/useMapboxToken";
 import { useToast } from "@/hooks/use-toast";
 
 const STATUS_META: Record<string, { label: string; color: string }> = {
-  pending: { label: "En attente d'un livreur", color: "text-yellow-400" },
-  accepted: { label: "Livreur en route vers ramassage", color: "text-primary" },
-  picked_up: { label: "Colis récupéré", color: "text-primary" },
-  in_transit: { label: "En cours de livraison", color: "text-primary" },
-  delivered: { label: "Livrée", color: "text-green-400" },
-  cancelled: { label: "Annulée", color: "text-red-400" },
+  PENDING: { label: "En attente", color: "text-yellow-400" },
+  SUBMITTED: { label: "Demande soumise", color: "text-yellow-400" },
+  EVALUATING: { label: "En évaluation", color: "text-yellow-400" },
+  PENDING_VALIDATION: { label: "Attente validation", color: "text-yellow-400" },
+  ACCEPTED: { label: "Acceptée", color: "text-primary" },
+  ASSIGNED: { label: "Livreur attribué", color: "text-primary" },
+  COLLECTING: { label: "Collecte en cours", color: "text-primary" },
+  PICKED_UP: { label: "Colis collecté", color: "text-primary" },
+  IN_TRANSIT: { label: "En cours de livraison", color: "text-primary" },
+  DELIVERED: { label: "Livrée", color: "text-green-400" },
+  CANCELLED: { label: "Annulée", color: "text-red-400" },
+  REJECTED: { label: "Refusée", color: "text-red-400" },
 };
 
 const Tracking = () => {
@@ -35,7 +41,6 @@ const Tracking = () => {
   const [route, setRoute] = useState<Array<[number, number]> | null>(null);
   const [estimatedTime, setEstimatedTime] = useState<number | null>(null);
   const [calculatingRoute, setCalculatingRoute] = useState(false);
-  const [copiedOtp, setCopiedOtp] = useState(false);
   const { token } = useMapboxToken();
   const { toast } = useToast();
 
@@ -46,7 +51,7 @@ const Tracking = () => {
       .from("orders")
       .select("*")
       .eq("client_id", user.id)
-      .in("status", ["pending", "accepted", "picked_up", "in_transit"])
+      .in("status", ["PENDING", "SUBMITTED", "ACCEPTED", "ASSIGNED", "COLLECTING", "PICKED_UP", "IN_TRANSIT"])
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         setActiveOrders(data ?? []);
@@ -64,7 +69,7 @@ const Tracking = () => {
       setOrder(data);
       if (data?.driver_id) {
         supabase
-          .from("driver_locations")
+          .from("driver_pings")
           .select("latitude,longitude")
           .eq("driver_id", data.driver_id)
           .maybeSingle()
@@ -94,7 +99,7 @@ const Tracking = () => {
     if (!order?.driver_id) return;
     const ch = supabase
       .channel(`loc-${order.driver_id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "driver_locations", filter: `driver_id=eq.${order.driver_id}` }, (payload: any) => {
+      .on("postgres_changes", { event: "*", schema: "public", table: "driver_pings", filter: `driver_id=eq.${order.driver_id}` }, (payload: any) => {
         const row = payload.new;
         if (row) {
           setDriverLoc({ lat: Number(row.latitude), lng: Number(row.longitude) });
@@ -112,7 +117,7 @@ const Tracking = () => {
     const calculateRoute = async () => {
       setCalculatingRoute(true);
       try {
-        const dropoff = [Number(order.dropoff_lng), Number(order.dropoff_lat)] as [number, number];
+        const dropoff = [Number(order.delivery_lng), Number(order.delivery_lat)] as [number, number];
         const driver = [driverLoc.lng, driverLoc.lat] as [number, number];
 
         const response = await fetch(
@@ -140,7 +145,7 @@ const Tracking = () => {
     if (!order?.driver_id) return;
     setRefreshing(true);
     supabase
-      .from("driver_locations")
+      .from("driver_pings")
       .select("latitude,longitude")
       .eq("driver_id", order.driver_id)
       .maybeSingle()
@@ -155,22 +160,11 @@ const Tracking = () => {
       });
   };
 
-  const handleCopyOtp = () => {
-    if (!order?.delivery_otp) return;
-    navigator.clipboard.writeText(order.delivery_otp);
-    setCopiedOtp(true);
-    toast({ title: "Code copié !", description: `Le code OTP ${order.delivery_otp} a été copié dans le presse-papier.` });
-    setTimeout(() => setCopiedOtp(false), 2000);
-  };
-
   const handleShareWhatsApp = () => {
     if (!order) return;
-    const otp = order.delivery_otp || "N/A";
     const text = `📦 *Livraison Vita Express Kinshasa*\n` +
-      `Bonjour ! Voici les détails pour réceptionner le colis :\n\n` +
-      `📍 *Destination :* ${order.dropoff_address}\n` +
-      `🔑 *Code secret OTP :* ${otp}\n\n` +
-      `⚠️ *Important :* Donnez ce code au livreur uniquement lorsqu'il est sur place pour vous remettre le colis.\n\n` +
+      `Le code de remise est envoyé uniquement au destinataire par WhatsApp.\n\n` +
+      `📍 *Destination :* ${order.delivery_address}\n` +
       `🔗 *Lien de suivi :* ${window.location.origin}/tracking`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   };
@@ -178,7 +172,7 @@ const Tracking = () => {
   const markers = order
     ? [
         { coordinates: [Number(order.pickup_lng), Number(order.pickup_lat)] as [number, number], type: "pickup" as const, popup: "Ramassage" },
-        { coordinates: [Number(order.dropoff_lng), Number(order.dropoff_lat)] as [number, number], type: "delivery" as const, popup: "Livraison" },
+        { coordinates: [Number(order.delivery_lng), Number(order.delivery_lat)] as [number, number], type: "delivery" as const, popup: "Livraison" },
         ...(driverLoc ? [{ coordinates: [driverLoc.lng, driverLoc.lat] as [number, number], type: "driver" as const, popup: "Livreur" }] : []),
       ]
     : [];
@@ -209,14 +203,14 @@ const Tracking = () => {
                   <Link key={o.id} to={`/dashboard/tracking?id=${o.id}`} className="group block bg-card border border-border rounded-2xl p-5 hover:border-primary/30 transition-all animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{o.pickup_address} → {o.dropoff_address}</p>
-                        <p className={`text-sm mt-1 ${STATUS_META[o.status]?.color}`}>{STATUS_META[o.status]?.label}</p>
+                        <p className="font-medium text-sm truncate">{o.pickup_address} → {o.delivery_address}</p>
+                        <p className={`text-sm mt-1 ${STATUS_META[String(o.status).toUpperCase()]?.color}`}>{STATUS_META[String(o.status).toUpperCase()]?.label}</p>
                       </div>
                       <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all shrink-0 mt-2" />
                     </div>
                     <div className="flex items-center justify-between pt-3 border-t border-border">
-                      <span className="text-sm text-muted-foreground">{o.distance_km} km</span>
-                      <Badge className="bg-primary/10 text-primary border-primary/20">{Number(o.price).toLocaleString()} FC</Badge>
+                      <span className="text-sm text-muted-foreground">{o.distance} km</span>
+                      <Badge className="bg-primary/10 text-primary border-primary/20">{Number(o.total_price ?? 0).toLocaleString()} FC</Badge>
                     </div>
                   </Link>
                 ))}
@@ -231,12 +225,12 @@ const Tracking = () => {
             <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
-                  <Badge className="mb-2 bg-primary/10 text-primary border-primary/20">{STATUS_META[order.status]?.label}</Badge>
-                  <p className="font-semibold text-sm">{order.pickup_address} → {order.dropoff_address}</p>
+                  <Badge className="mb-2 bg-primary/10 text-primary border-primary/20">{STATUS_META[String(order.status).toUpperCase()]?.label}</Badge>
+                  <p className="font-semibold text-sm">{order.pickup_address} → {order.delivery_address}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-muted-foreground">{order.distance_km} km</p>
-                  <p className="text-xl font-bold text-primary">{Number(order.price).toLocaleString()} FC</p>
+                  <p className="text-sm text-muted-foreground">{order.distance} km</p>
+                  <p className="text-xl font-bold text-primary">{Number(order.total_price ?? 0).toLocaleString()} FC</p>
                 </div>
               </div>
 
@@ -289,55 +283,22 @@ const Tracking = () => {
             </div>
 
             {/* ── CARTE CODE OTP DE LIVRAISON SÉCURISÉ ── */}
-            {order.status !== "delivered" && order.status !== "cancelled" && (
-              <div className="bg-gradient-to-br from-primary/15 via-card to-card border-2 border-primary/30 rounded-2xl p-5 shadow-lg relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -z-0 pointer-events-none" />
-                
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <ShieldCheck className="w-5 h-5 text-primary" />
-                      <span className="font-poppins font-bold text-sm uppercase tracking-wider text-foreground">
-                        Code de sécurité livraison (OTP)
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground max-w-md">
-                      Communiquez ce code au livreur <strong>uniquement à son arrivée</strong> lors de la remise effective du colis.
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <div className="bg-black/80 border border-primary/40 px-4 py-2 rounded-xl text-2xl font-mono font-black tracking-widest text-primary shadow-inner">
-                      {order.delivery_otp || "----"}
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                      <Button
-                        size="icon"
-                        variant="secondary"
-                        onClick={handleCopyOtp}
-                        title="Copier le code"
-                        className="rounded-xl border border-border"
-                      >
-                        {copiedOtp ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-primary" />}
-                      </Button>
-
-                      <Button
-                        size="sm"
-                        onClick={handleShareWhatsApp}
-                        className="bg-green-600 hover:bg-green-500 text-white font-medium rounded-xl gap-1.5 shadow-sm"
-                        title="Partager par WhatsApp"
-                      >
-                        <Share2 className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Partager WhatsApp</span>
-                      </Button>
-                    </div>
-                  </div>
+            {String(order.status).toUpperCase() !== "DELIVERED" && String(order.status).toUpperCase() !== "CANCELLED" && (
+              <div className="bg-card border border-primary/30 rounded-2xl p-5">
+                <div className="flex items-center gap-2 mb-2">
+                  <ShieldCheck className="w-5 h-5 text-primary" />
+                  <span className="font-poppins font-bold text-sm uppercase tracking-wider">Code destinataire</span>
                 </div>
+                <p className="text-xs text-muted-foreground max-w-md">
+                  Le code de remise est envoyé uniquement au destinataire (WhatsApp). Il n’est pas affiché ici, ni au livreur, ni à l’admin.
+                </p>
+                <Button size="sm" className="mt-3 bg-green-600 hover:bg-green-500 text-white" onClick={handleShareWhatsApp}>
+                  <Share2 className="w-3.5 h-3.5 mr-1.5" /> Informer le destinataire
+                </Button>
               </div>
             )}
 
-            {order.status === "delivered" && (
+            {String(order.status).toUpperCase() === "DELIVERED" && (
               <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-4 flex items-center gap-3">
                 <CheckCircle2 className="w-6 h-6 text-green-400 shrink-0" />
                 <div>

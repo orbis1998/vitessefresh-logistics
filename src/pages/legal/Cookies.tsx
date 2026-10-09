@@ -3,19 +3,25 @@ import LegalPage from "./LegalPage";
 const Cookies = () => (
   <LegalPage title="Politique cookies" updated="9 octobre 2026">
     <p>
-      Vita Express utilise des cookies et stockages locaux strictement nécessaires
-      à la session (connexion, sécurité) et, le cas échéant, à la mesure d'audience.
+      Vita Express utilise des cookies et un stockage local. Une bannière vous permet
+      d’accepter ou de refuser les cookies non essentiels. Le refus est aussi simple
+      que l’acceptation : un clic, sans parcours supplémentaire.
     </p>
-    <h2>Cookies essentiels</h2>
+    <h2>Cookies essentiels (toujours actifs)</h2>
     <p>
-      Ils permettent de rester connecté, de protéger le compte et de mémoriser
-      vos préférences de navigation. Ils ne peuvent pas être désactivés sans
-      dégrader le service.
+      Session de connexion (Supabase Auth), protection CSRF/PKCE, mémorisation du choix
+      de consentement. Sans eux, le compte et les commandes ne fonctionnent pas.
     </p>
-    <h2>Contrôle</h2>
+    <h2>Cookies de mesure (optionnels)</h2>
     <p>
-      Vous pouvez limiter les cookies non essentiels depuis les réglages de votre
-      navigateur. Pour une question : contact@vita-express.cd.
+      Uniquement si vous cliquez sur « Accepter ». Ils servent à compter les visites de
+      pages publiques. Aucun identifiant publicitaire n’est vendu à des tiers.
+    </p>
+    <h2>Modifier votre choix</h2>
+    <p>
+      Effacez la clé <code>vita_cookie_consent</code> dans le stockage local de votre
+      navigateur, ou contactez contact@vita-express.cd. Un nouveau passage sur le site
+      réaffiche la bannière.
     </p>
   </LegalPage>
 );

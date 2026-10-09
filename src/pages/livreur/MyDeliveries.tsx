@@ -13,22 +13,26 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
 const STATUS_META: Record<string, { label: string; icon: any; color: string; step: number }> = {
-  accepted:  { label: "Acceptée",      icon: CheckCircle2, color: "text-primary", step: 0 },
-  picked_up: { label: "Ramassée",      icon: Package,      color: "text-primary", step: 1 },
-  in_transit:{ label: "En transit",     icon: Truck,        color: "text-primary", step: 2 },
-  delivered: { label: "Livrée",         icon: CheckCircle2, color: "text-green-400", step: 3 },
+  ASSIGNED:   { label: "Attribuée",     icon: CheckCircle2, color: "text-primary", step: 0 },
+  ACCEPTED:   { label: "Acceptée",      icon: CheckCircle2, color: "text-primary", step: 0 },
+  COLLECTING: { label: "Collecte",      icon: Package,      color: "text-primary", step: 1 },
+  PICKED_UP:  { label: "Collectée",     icon: Package,      color: "text-primary", step: 1 },
+  IN_TRANSIT: { label: "En livraison",  icon: Truck,        color: "text-primary", step: 2 },
+  DELIVERED:  { label: "Livrée",        icon: CheckCircle2, color: "text-green-400", step: 3 },
 };
 
 const STEPS = [
-  { key: "accepted",  label: "Acceptée" },
-  { key: "picked_up", label: "Ramassée" },
-  { key: "in_transit",label: "Transit" },
-  { key: "delivered", label: "Livrée" },
+  { key: "ASSIGNED",  label: "Attribuée" },
+  { key: "PICKED_UP", label: "Collectée" },
+  { key: "IN_TRANSIT",label: "Transit" },
+  { key: "DELIVERED", label: "Livrée" },
 ];
 
 const NEXT_STATUS: Record<string, { next: string; label: string }> = {
-  accepted:   { next: "picked_up",  label: "Colis récupéré ✓" },
-  picked_up:  { next: "in_transit", label: "Démarrer livraison →" },
+  ASSIGNED:   { next: "COLLECTING", label: "Démarrer collecte" },
+  ACCEPTED:   { next: "COLLECTING", label: "Démarrer collecte" },
+  COLLECTING: { next: "PICKED_UP",  label: "Colis collecté ✓" },
+  PICKED_UP:  { next: "IN_TRANSIT", label: "Démarrer livraison →" },
 };
 
 /* ───────── Component ───────── */
@@ -69,7 +73,7 @@ const MyDeliveries = () => {
       async (pos) => {
         const { latitude, longitude, heading, speed } = pos.coords;
         setCurrentPos({ lat: latitude, lng: longitude });
-        await supabase.from("driver_locations").upsert({
+        await supabase.from("driver_pings").upsert({
           driver_id: user.id,
           latitude,
           longitude,
@@ -99,30 +103,29 @@ const MyDeliveries = () => {
 
   /* ---- Status advance ---- */
   const advanceStatus = async (order: any) => {
-    const next = NEXT_STATUS[order.status];
+    const next = NEXT_STATUS[String(order.status).toUpperCase()];
     if (!next) return;
     const update: any = { status: next.next };
-    if (next.next === "delivered") update.delivered_at = new Date().toISOString();
     await supabase.from("orders").update(update).eq("id", order.id);
-    if (next.next === "delivered" && user) {
-      await supabase.from("driver_profiles").update({ status: "available" }).eq("user_id", user.id);
+    if (next.next === "IN_TRANSIT") {
+      await supabase.functions.invoke("issue-delivery-code", { body: { order_id: order.id } });
     }
     toast({ title: next.label.replace(/[✓→]/g, "").trim(), description: "Statut mis à jour" });
     load();
   };
 
-  const active = orders.filter((o) => ["accepted", "picked_up", "in_transit"].includes(o.status));
-  const history = orders.filter((o) => ["delivered", "cancelled"].includes(o.status));
+  const active = orders.filter((o) => ["ASSIGNED", "ACCEPTED", "COLLECTING", "PICKED_UP", "IN_TRANSIT"].includes(String(o.status).toUpperCase()));
+  const history = orders.filter((o) => ["DELIVERED", "CANCELLED"].includes(String(o.status).toUpperCase()));
   const current = active[activeIdx] ?? null;
 
   /* ---- Timeline helpers ---- */
-  const currentStep = current ? STATUS_META[current.status]?.step ?? 0 : 0;
+  const currentStep = current ? STATUS_META[String(current.status).toUpperCase()]?.step ?? 0 : 0;
 
   /* ---- Markers ---- */
   const markers = current
     ? [
         { coordinates: [Number(current.pickup_lng), Number(current.pickup_lat)] as [number, number], type: "pickup" as const, popup: "Ramassage" },
-        { coordinates: [Number(current.dropoff_lng), Number(current.dropoff_lat)] as [number, number], type: "delivery" as const, popup: "Livraison" },
+        { coordinates: [Number(current.delivery_lng), Number(current.delivery_lat)] as [number, number], type: "delivery" as const, popup: "Livraison" },
         ...(currentPos ? [{ coordinates: [currentPos.lng, currentPos.lat] as [number, number], type: "driver" as const, popup: "Moi" }] : []),
       ]
     : [];
@@ -156,7 +159,7 @@ const MyDeliveries = () => {
             {/* Header + nav */}
             <div className="flex items-center justify-between">
               <div>
-                <Badge className="mb-1 bg-primary/10 text-primary border-primary/20">{STATUS_META[current.status]?.label ?? current.status}</Badge>
+                <Badge className="mb-1 bg-primary/10 text-primary border-primary/20">{STATUS_META[String(current.status).toUpperCase()]?.label ?? current.status}</Badge>
                 <p className="text-xs text-muted-foreground">Course {activeIdx + 1} / {active.length}</p>
               </div>
               <div className="flex gap-1">
@@ -243,13 +246,13 @@ const MyDeliveries = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Livraison</p>
-                  <p className="text-sm font-medium">{current.dropoff_address}</p>
+                  <p className="text-sm font-medium">{current.delivery_address}</p>
                 </div>
               </div>
 
               <div className="flex items-center justify-between pt-2 border-t border-border">
-                <div className="text-sm text-muted-foreground">{current.distance_km} km</div>
-                <div className="text-xl font-bold text-primary">{Number(current.price).toLocaleString()} FC</div>
+                <div className="text-sm text-muted-foreground">{current.distance} km</div>
+                <div className="text-xl font-bold text-primary">{Number(current.total_price ?? 0).toLocaleString()} FC</div>
               </div>
             </div>
 
@@ -260,11 +263,11 @@ const MyDeliveries = () => {
                 {history.slice(0, 5).map((o) => (
                   <div key={o.id} className="bg-card border border-border rounded-xl p-4 flex items-center justify-between hover:border-primary/20 transition-colors">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{o.pickup_address} → {o.dropoff_address}</p>
+                      <p className="text-sm font-medium truncate">{o.pickup_address} → {o.delivery_address}</p>
                       <p className="text-xs text-muted-foreground">{new Date(o.created_at).toLocaleDateString("fr-FR")}</p>
                     </div>
-                    <Badge className={o.status === "delivered" ? "bg-green-500/10 text-green-400 border-green-500/20" : "bg-red-500/10 text-red-400 border-red-500/20"}>
-                      {STATUS_META[o.status]?.label ?? o.status}
+                    <Badge className={String(o.status).toUpperCase() === "DELIVERED" ? "bg-green-500/10 text-green-400 border-green-500/20" : "bg-red-500/10 text-red-400 border-red-500/20"}>
+                      {STATUS_META[String(o.status).toUpperCase()]?.label ?? o.status}
                     </Badge>
                   </div>
                 ))}
@@ -275,7 +278,7 @@ const MyDeliveries = () => {
       </div>
 
       {/* ── Sticky bottom action bar ── */}
-      {current && (NEXT_STATUS[current.status] || current.status === "in_transit") && (
+      {current && (NEXT_STATUS[String(current.status).toUpperCase()] || String(current.status).toUpperCase() === "IN_TRANSIT") && (
         <div className="fixed bottom-0 left-0 right-0 z-40 bg-black/90 backdrop-blur-xl border-t border-white/10 p-4 safe-area-pb">
           <div className="max-w-3xl mx-auto flex items-center gap-3">
             {current.recipient_phone && (
@@ -286,7 +289,7 @@ const MyDeliveries = () => {
                 <Phone className="w-5 h-5" />
               </a>
             )}
-            {current.status === "in_transit" ? (
+            {String(current.status).toUpperCase() === "IN_TRANSIT" ? (
               <Button asChild size="lg" className="flex-1 font-bold tracking-wide">
                 <Link to="/livreur">Saisir l’OTP destinataire</Link>
               </Button>
@@ -296,7 +299,7 @@ const MyDeliveries = () => {
                 className="flex-1 font-bold tracking-wide"
                 onClick={() => advanceStatus(current)}
               >
-                {NEXT_STATUS[current.status].label}
+                {NEXT_STATUS[String(current.status).toUpperCase()].label}
               </Button>
             )}
           </div>

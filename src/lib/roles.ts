@@ -73,6 +73,40 @@ export function isStaff(roles: AppRole[]) {
   return roles.some((r) => STAFF_ROLES.includes(r));
 }
 
+const VITA_TO_APP: Record<string, AppRole> = {
+  ADMIN: "admin",
+  GESTIONNAIRE: "gestionnaire",
+  DISPATCH: "call_center",
+  SUIVI: "suivi",
+  SUPPORT: "support",
+  COMPTABLE: "comptable",
+  FINANCE: "finance",
+  ENTREPRISE: "entreprise",
+  DRIVER: "livreur",
+  CLIENT: "client",
+};
+
+export function fromVitaRole(role: string | null | undefined): AppRole {
+  if (!role) return "client";
+  return VITA_TO_APP[role.toUpperCase()] ?? "client";
+}
+
+export function toVitaRole(role: AppRole): string {
+  const m: Record<AppRole, string> = {
+    admin: "ADMIN",
+    gestionnaire: "GESTIONNAIRE",
+    call_center: "DISPATCH",
+    suivi: "SUIVI",
+    support: "SUPPORT",
+    comptable: "COMPTABLE",
+    finance: "FINANCE",
+    entreprise: "ENTREPRISE",
+    livreur: "DRIVER",
+    client: "CLIENT",
+  };
+  return m[role];
+}
+
 export type NavItem = { icon: LucideIcon; label: string; href: string };
 
 const ADMIN_MENU: NavItem[] = [

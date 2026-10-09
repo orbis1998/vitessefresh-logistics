@@ -9,8 +9,8 @@ const Privacy = () => (
     <h2>Données collectées</h2>
     <p>
       Identité, coordonnées, adresses de ramassage et de dépôt, position du livreur
-      pendant une course, historique de commandes, et données de paiement selon le
-      moyen choisi.
+      pendant une course, photos privées du colis (bucket Storage non public),
+      historique de commandes, et données de paiement selon le moyen choisi.
     </p>
     <h2>Finalités</h2>
     <p>

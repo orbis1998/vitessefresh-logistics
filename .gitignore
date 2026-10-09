@@ -13,6 +13,11 @@ whatsapp-gateway/session
 whatsapp-gateway/node_modules
 dist-ssr
 *.local
+tmp-vita-schema.json
+tmp-vita-schema.cjs
+.env
+!.env.example
+scripts/deploy-functions.log
 
 # Editor directories and files
 .vscode/*
