@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AuthLayout from "@/components/auth/AuthLayout";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
+import PhoneAuth from "@/components/auth/PhoneAuth";
 import { normalizeDrcPhone } from "@/lib/flexpay";
 import { cn } from "@/lib/utils";
 
@@ -29,20 +30,6 @@ const STRENGTH = [
   { label: "Fort", className: "bg-primary" },
   { label: "Excellent", className: "bg-emerald-500" },
 ];
-
-const formatLocalPhone = (digits: string) => {
-  const d = digits.slice(0, 9);
-  if (d.length <= 3) return d;
-  if (d.length <= 6) return `${d.slice(0, 3)} ${d.slice(3)}`;
-  return `${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}`;
-};
-
-const sanitizeLocalPhone = (raw: string) => {
-  let digits = raw.replace(/\D/g, "");
-  if (digits.startsWith("243")) digits = digits.slice(3);
-  while (digits.startsWith("0")) digits = digits.slice(1);
-  return digits.slice(0, 9);
-};
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -72,15 +59,6 @@ const Register = () => {
       return;
     }
 
-    if (formData.phoneLocal.length < 9) {
-      toast({
-        title: "Numéro incomplet",
-        description: "Entrez les 9 chiffres, sans le 0 devant.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (strength < 2) {
       toast({
         title: "Mot de passe trop faible",
@@ -107,7 +85,7 @@ const Register = () => {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
         data: {
           full_name: formData.fullName,
-          phone: normalizeDrcPhone(`243${formData.phoneLocal}`),
+          phone: formData.phoneLocal ? normalizeDrcPhone(`243${formData.phoneLocal}`) : undefined,
         },
       },
     });
@@ -125,6 +103,25 @@ const Register = () => {
 
   return (
     <AuthLayout title="Inscription">
+      <p className="text-sm text-muted-foreground -mt-4 mb-6">
+        Compte avec votre numéro. Le code arrive sur WhatsApp.
+      </p>
+      <div className="space-y-4 mb-6">
+        <div className="space-y-2">
+          <Label htmlFor="fullName">Nom complet</Label>
+          <Input
+            id="fullName"
+            name="fullName"
+            type="text"
+            autoComplete="name"
+            value={formData.fullName}
+            onChange={handleChange}
+            className="h-12"
+            required
+          />
+        </div>
+        <PhoneAuth mode="register" fullName={formData.fullName} />
+      </div>
       <GoogleAuthButton label="S'inscrire avec Google" />
 
       <div className="relative my-6">
@@ -154,20 +151,6 @@ const Register = () => {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="fullName">Nom complet</Label>
-          <Input
-            id="fullName"
-            name="fullName"
-            type="text"
-            autoComplete="name"
-            value={formData.fullName}
-            onChange={handleChange}
-            className="h-12"
-            required
-          />
-        </div>
-
-        <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <Input
             id="email"
@@ -179,29 +162,6 @@ const Register = () => {
             className="h-12"
             required
           />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="phone">Téléphone</Label>
-          <div className="flex h-12 rounded-md border border-input overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 ring-offset-background">
-            <span className="flex items-center px-3 text-sm font-medium bg-muted/40 border-r border-input shrink-0 text-foreground">
-              +243
-            </span>
-            <input
-              id="phone"
-              name="phone"
-              type="tel"
-              inputMode="numeric"
-              autoComplete="tel-national"
-              placeholder="812 345 678"
-              value={formatLocalPhone(formData.phoneLocal)}
-              onChange={(e) =>
-                setFormData({ ...formData, phoneLocal: sanitizeLocalPhone(e.target.value) })
-              }
-              className="flex-1 bg-transparent px-3 text-base md:text-sm outline-none h-full placeholder:text-muted-foreground"
-              required
-            />
-          </div>
         </div>
 
         <div className="space-y-2">

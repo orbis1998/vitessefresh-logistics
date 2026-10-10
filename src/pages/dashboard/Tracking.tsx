@@ -11,6 +11,7 @@ import MapView from "@/components/MapView";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useMapboxToken } from "@/hooks/useMapboxToken";
+import { drivingRoute } from "@/lib/vita-map";
 import { useToast } from "@/hooks/use-toast";
 
 const STATUS_META: Record<string, { label: string; color: string }> = {
@@ -112,24 +113,17 @@ const Tracking = () => {
 
   // calculate route when driver location or order changes
   useEffect(() => {
-    if (!driverLoc || !order || !token) return;
+    if (!driverLoc || !order) return;
 
     const calculateRoute = async () => {
       setCalculatingRoute(true);
       try {
         const dropoff = [Number(order.delivery_lng), Number(order.delivery_lat)] as [number, number];
         const driver = [driverLoc.lng, driverLoc.lat] as [number, number];
-
-        const response = await fetch(
-          `https://api.mapbox.com/directions/v5/mapbox/driving/${driver[0]},${driver[1]};${dropoff[0]},${dropoff[1]}?overview=full&geometries=geojson&access_token=${token}`
-        );
-        const data = await response.json();
-
-        if (data.routes && data.routes[0]) {
-          const routeData = data.routes[0];
-          const coordinates = routeData.geometry.coordinates as [number, number][];
-          setRoute(coordinates);
-          setEstimatedTime(routeData.duration); // duration in seconds
+        const data = await drivingRoute(driver, dropoff, token);
+        if (data) {
+          setRoute(data.coordinates);
+          setEstimatedTime(data.durationSec);
         }
       } catch (error) {
         console.error("Error calculating route:", error);
@@ -203,6 +197,7 @@ const Tracking = () => {
                   <Link key={o.id} to={`/dashboard/tracking?id=${o.id}`} className="group block bg-card border border-border rounded-2xl p-5 hover:border-primary/30 transition-all animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="flex-1 min-w-0">
+                        <p className="font-heading text-sm tabular-nums text-primary">{o.order_number}</p>
                         <p className="font-medium text-sm truncate">{o.pickup_address} → {o.delivery_address}</p>
                         <p className={`text-sm mt-1 ${STATUS_META[String(o.status).toUpperCase()]?.color}`}>{STATUS_META[String(o.status).toUpperCase()]?.label}</p>
                       </div>
@@ -225,6 +220,7 @@ const Tracking = () => {
             <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
+                  <p className="font-heading text-xl tabular-nums text-primary mb-1">{order.order_number}</p>
                   <Badge className="mb-2 bg-primary/10 text-primary border-primary/20">{STATUS_META[String(order.status).toUpperCase()]?.label}</Badge>
                   <p className="font-semibold text-sm">{order.pickup_address} → {order.delivery_address}</p>
                 </div>

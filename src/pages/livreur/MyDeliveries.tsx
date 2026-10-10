@@ -107,7 +107,7 @@ const MyDeliveries = () => {
     if (!next) return;
     const update: any = { status: next.next };
     await supabase.from("orders").update(update).eq("id", order.id);
-    if (next.next === "IN_TRANSIT") {
+    if (next.next === "PICKED_UP") {
       await supabase.functions.invoke("issue-delivery-code", { body: { order_id: order.id } });
     }
     toast({ title: next.label.replace(/[✓→]/g, "").trim(), description: "Statut mis à jour" });

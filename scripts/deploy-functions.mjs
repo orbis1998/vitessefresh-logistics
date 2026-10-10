@@ -18,7 +18,9 @@ const fns = [
   { slug: "analyze-parcel", jwt: true },
   { slug: "issue-delivery-code", jwt: true },
   { slug: "create-staff", jwt: true },
-  { slug: "get-mapbox-token", jwt: true },
+  { slug: "get-mapbox-token", jwt: false },
+  { slug: "request-phone-otp", jwt: false },
+  { slug: "verify-phone-otp", jwt: false },
 ];
 
 for (const fn of fns) {

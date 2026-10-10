@@ -8,11 +8,16 @@ export const getPostAuthPath = (roles: string[]) => {
 };
 
 export const fetchMyRoles = async () => {
-  const { data: session } = await supabase.auth.getUser();
-  const uid = session.user?.id;
-  if (!uid) return [];
-  const { data } = await supabase.from("users").select("role").eq("id", uid).maybeSingle();
-  if (data?.role) return [fromVitaRole(String(data.role))];
+  for (let i = 0; i < 6; i++) {
+    const { data: session } = await supabase.auth.getUser();
+    const uid = session.user?.id;
+    if (uid) {
+      const { data } = await supabase.from("users").select("role").eq("id", uid).maybeSingle();
+      if (data?.role) return [fromVitaRole(String(data.role))];
+      return ["client"];
+    }
+    await new Promise((r) => setTimeout(r, 150));
+  }
   return ["client"];
 };
 

@@ -61,19 +61,20 @@ const Tracking = () => {
     if (!trackingCode.trim()) return;
     setIsSearching(true);
     const code = trackingCode.trim();
-    const { data } = await supabase.from("orders").select("id, status, pickup_address, delivery_address, created_at").eq("id", code).maybeSingle();
-    if (data) {
+    const { data, error } = await supabase.rpc("track_parcel", { p_code: code });
+    const row = data as Record<string, unknown> | null;
+    if (!error && row && !row.error) {
       setOrderData({
-        id: data.id,
-        status: toVitaStatus(data.status),
+        id: String(row.order_number || code),
+        status: toVitaStatus(String(row.status || "")),
         estimatedDelivery: "—",
-        currentLocation: data.delivery_address,
+        currentLocation: String(row.delivery_address || ""),
         driver: { name: "Livreur Vita", phone: "", photo: "", rating: 0 },
-        timeline: [{ time: "", status: data.status, title: statusLabel(data.status), description: `${data.pickup_address} → ${data.delivery_address}` }],
-        addresses: { pickup: data.pickup_address, delivery: data.delivery_address },
+        timeline: [{ time: "", status: String(row.status), title: statusLabel(String(row.status)), description: `${row.pickup_address} → ${row.delivery_address}` }],
+        addresses: { pickup: String(row.pickup_address || ""), delivery: String(row.delivery_address || "") },
       });
     } else {
-      setOrderData(mockOrderData);
+      setOrderData(null);
     }
     setIsSearching(false);
   };

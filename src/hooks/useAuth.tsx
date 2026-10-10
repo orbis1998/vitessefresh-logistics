@@ -85,7 +85,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const primaryRole: AppRole | null = pickPrimaryRole(roles);
 
   const refreshRoles = async () => {
-    if (user) await fetchRoles(user.id);
+    const uid = user?.id ?? (await supabase.auth.getUser()).data.user?.id;
+    if (uid) await fetchRoles(uid);
   };
 
   return (

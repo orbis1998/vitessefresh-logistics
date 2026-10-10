@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
-import { useMapboxToken } from "@/hooks/useMapboxToken";
+import { drivingRoute, useVitaMapStyle } from "@/lib/vita-map";
 import { haversineKm } from "@/lib/distance";
 
 const GOMBE: [number, number] = [15.3078, -4.3195];
@@ -95,26 +95,28 @@ const addBuildings = (map: mapboxgl.Map) => {
 const HeroMapScene = () => {
   const rootRef = useRef<HTMLDivElement>(null);
   const mapEl = useRef<HTMLDivElement>(null);
-  const { token } = useMapboxToken();
+  const { token, style } = useVitaMapStyle();
 
   useEffect(() => {
     const node = mapEl.current;
-    if (!node || !token) return;
+    if (!node || !style) return;
 
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    mapboxgl.accessToken = token;
+    if (token) mapboxgl.accessToken = token;
+    const vector = style === "mapbox://styles/mapbox/dark-v11";
 
     const map = new mapboxgl.Map({
       container: node,
-      style: "mapbox://styles/mapbox/dark-v11",
+      style,
       center: [15.328, -4.345],
       zoom: 14.2,
-      pitch: 58,
-      bearing: 24,
+      pitch: vector ? 58 : 0,
+      bearing: vector ? 24 : 0,
       interactive: false,
       attributionControl: true,
       logoPosition: "bottom-right",
       antialias: true,
+      failIfMajorPerformanceCaveat: false,
     });
 
     let cancelled = false;
@@ -206,21 +208,17 @@ const HeroMapScene = () => {
     const boot = () => {
       if (cancelled) return;
       map.resize();
-      addBuildings(map);
+      if (vector) addBuildings(map);
     };
 
     map.on("style.load", boot);
     map.on("load", async () => {
       if (cancelled) return;
       map.resize();
-      addBuildings(map);
+      if (vector) addBuildings(map);
       try {
-        const res = await fetch(
-          `https://api.mapbox.com/directions/v5/mapbox/driving/${GOMBE.join(",")};${LIMETE.join(",")}?geometries=geojson&overview=full&access_token=${token}`
-        );
-        const data = await res.json();
-        const coords = data?.routes?.[0]?.geometry?.coordinates as [number, number][] | undefined;
-        paintRoute(coords?.length ? coords : FALLBACK_ROUTE);
+        const data = await drivingRoute(GOMBE, LIMETE, token);
+        paintRoute(data?.coordinates?.length ? data.coordinates : FALLBACK_ROUTE);
       } catch {
         paintRoute(FALLBACK_ROUTE);
       }
@@ -256,7 +254,7 @@ const HeroMapScene = () => {
       courier.remove();
       map.remove();
     };
-  }, [token]);
+  }, [token, style]);
 
   return (
     <div ref={rootRef} className="absolute inset-0 overflow-hidden bg-[#101214]" aria-hidden="true">

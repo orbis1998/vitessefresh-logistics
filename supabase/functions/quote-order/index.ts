@@ -67,20 +67,23 @@ Deno.serve(async (req) => {
     return json({ error: "Coordonnées requises" }, 400);
   }
 
-  const { data: zones } = await admin.from("zones").select("name, category, active, boundary");
-  let zone: { name?: string; category?: string } | null = null;
-  for (const z of zones ?? []) {
-    if (!z.active || !z.boundary) continue;
-    const b = z.boundary as { type?: string; coordinates?: number[][][] };
-    if (b.type === "Polygon" && inPoly(deliveryLng, deliveryLat, b as { coordinates: number[][][] })) {
-      zone = z;
-      break;
+  const { data: zones } = await admin.from("zones").select("id, name, category, active, boundary");
+  type ZoneRow = { id: string; name?: string; category?: string; active?: boolean; boundary?: { type?: string; coordinates?: number[][][] } | null };
+  const list = (zones ?? []) as ZoneRow[];
+  const matchZone = (lng: number, lat: number) => {
+    for (const z of list) {
+      if (!z.active || !z.boundary) continue;
+      const b = z.boundary;
+      if (b.type === "Polygon" && inPoly(lng, lat, b as { coordinates: number[][][] })) return z;
     }
-  }
+    return null;
+  };
+  const pickupZone = matchZone(pickupLng, pickupLat);
+  const zone = matchZone(deliveryLng, deliveryLat);
   if (zone?.category === "unserved" || zone?.category === "suspended") {
     return json({ error: zone.category === "unserved" ? "Zone non desservie" : "Zone suspendue", blocked: true }, 422);
   }
-  if (!zone && (zones ?? []).some((z) => z.boundary)) {
+  if (!zone && list.some((z) => z.boundary)) {
     return json({ error: "Point hors zone configurée", blocked: true }, 422);
   }
 
@@ -98,6 +101,18 @@ Deno.serve(async (req) => {
       if (typeof meters === "number" && meters > 0) roadKm = meters / 1000;
     } catch {
       roadKm = null;
+    }
+  }
+  if (!roadKm) {
+    try {
+      const res = await fetch(
+        `https://router.project-osrm.org/route/v1/driving/${pickupLng},${pickupLat};${deliveryLng},${deliveryLat}?overview=simplified`,
+      );
+      const data = await res.json();
+      const meters = data?.routes?.[0]?.distance;
+      if (typeof meters === "number" && meters > 0) roadKm = meters / 1000;
+    } catch {
+      /* haversine */
     }
   }
 
@@ -121,6 +136,8 @@ Deno.serve(async (req) => {
     lines,
     totalFc,
     zone: zone?.name ?? null,
+    pickupZoneId: pickupZone?.id ?? null,
+    deliveryZoneId: zone?.id ?? null,
     trafficUsed: false,
   });
 });

@@ -11,11 +11,7 @@ import {
   User,
 } from "lucide-react";
 import { useInView } from "@/hooks/useInView";
-import { useMapboxToken } from "@/hooks/useMapboxToken";
 import { VitaWordmark } from "@/components/brand/VitaWordmark";
-
-const GOMBE = { lng: 15.3078, lat: -4.3195 };
-const LIMETE = { lng: 15.3555, lat: -4.3752 };
 
 const HowItWorksSection = () => {
   const { ref, visible } = useInView<HTMLElement>(0.12);
@@ -106,26 +102,11 @@ const PhoneShell = ({ children, light }: { children: ReactNode; light?: boolean 
   </div>
 );
 
-const PhoneMap = ({ className = "", children }: { className?: string; children?: ReactNode }) => {
-  const { token } = useMapboxToken();
-  const overlay = encodeURIComponent(
-    `path-4+ffc400-0.9(${GOMBE.lng},${GOMBE.lat};15.3291,-4.3412;${LIMETE.lng},${LIMETE.lat}),pin-s+ffc400(${GOMBE.lng},${GOMBE.lat}),pin-s+ffffff(${LIMETE.lng},${LIMETE.lat})`
-  );
-  const src = token
-    ? `https://api.mapbox.com/styles/v1/mapbox/dark-v11/static/${overlay}/${(GOMBE.lng + LIMETE.lng) / 2},${(GOMBE.lat + LIMETE.lat) / 2},12.4,24,48/440x320@2x?access_token=${token}`
-    : "";
-
-  return (
-    <div className={`relative overflow-hidden bg-[#1a1c1f] ${className}`}>
-      {src ? (
-        <img src={src} alt="Carte Kinshasa Gombe–Limete" className="absolute inset-0 h-full w-full object-cover" />
-      ) : (
-        <div className="absolute inset-0 bg-[#1a1c1f]" />
-      )}
-      {children}
-    </div>
-  );
-};
+const PhoneMap = ({ className = "", children }: { className?: string; children?: ReactNode }) => (
+  <div className={`relative overflow-hidden howit-mini-map ${className}`}>
+    {children}
+  </div>
+);
 
 const Screen1 = () => (
   <PhoneShell>

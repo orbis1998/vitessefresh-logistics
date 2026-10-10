@@ -70,7 +70,8 @@ const OrdersList = () => {
               >
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{o.pickup_address} → {o.delivery_address}</p>
+                    <p className="font-heading text-sm tabular-nums text-primary">{o.order_number || "—"}</p>
+                    <p className="font-medium text-sm truncate mt-0.5">{o.pickup_address} → {o.delivery_address}</p>
                     <p className="text-xs text-muted-foreground mt-1">{new Date(o.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
                   </div>
                   <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all shrink-0 mt-2" />

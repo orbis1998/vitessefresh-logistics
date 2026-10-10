@@ -4,6 +4,7 @@ import { ArrowRight, Loader2, LocateFixed } from "lucide-react";
 import mapboxgl from "mapbox-gl";
 import { Button } from "@/components/ui/button";
 import { useMapboxToken } from "@/hooks/useMapboxToken";
+import { reverseGeocode, searchKinshasa, useVitaMapStyle } from "@/lib/vita-map";
 import { useAuth } from "@/hooks/useAuth";
 import { computePriceFC, estimateMinutes, formatFC, haversineKm } from "@/lib/distance";
 
@@ -17,8 +18,6 @@ interface Suggestion {
   place_name: string;
   center: [number, number];
 }
-
-const KINSHASA_BBOX = "15.1,-4.5,15.5,-4.2";
 
 const PACKAGES = [
   { id: "document", label: "Document" },
@@ -56,22 +55,13 @@ const QuoteEstimate = () => {
 
   const search = useCallback(
     async (query: string, setter: (s: Suggestion[]) => void, busy: (b: boolean) => void) => {
-      if (!token || query.trim().length < 3) {
+      if (query.trim().length < 3) {
         setter([]);
         return;
       }
       busy(true);
       try {
-        const res = await fetch(
-          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&language=fr&country=cd&limit=5&bbox=${KINSHASA_BBOX}`
-        );
-        const data = await res.json();
-        setter(
-          data.features?.map((f: { place_name: string; center: [number, number] }) => ({
-            place_name: f.place_name,
-            center: f.center,
-          })) ?? []
-        );
+        setter(await searchKinshasa(query, token));
       } catch {
         setter([]);
       } finally {
@@ -110,13 +100,8 @@ const QuoteEstimate = () => {
 
   const reverse = useCallback(
     async (lng: number, lat: number) => {
-      if (!token) return "Position choisie";
       try {
-        const res = await fetch(
-          `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${token}&language=fr&limit=1`
-        );
-        const data = await res.json();
-        return data.features?.[0]?.place_name || "Position choisie";
+        return await reverseGeocode(lng, lat, token);
       } catch {
         return "Position choisie";
       }
@@ -323,16 +308,18 @@ const QuoteMap = ({
   const dropMk = useRef<mapboxgl.Marker | null>(null);
   const onPick = useRef(onPickDropoff);
   onPick.current = onPickDropoff;
+  const { style } = useVitaMapStyle();
 
   useEffect(() => {
-    if (!el.current || !token) return;
-    mapboxgl.accessToken = token;
+    if (!el.current || !style) return;
+    if (token) mapboxgl.accessToken = token;
     const map = new mapboxgl.Map({
       container: el.current,
-      style: "mapbox://styles/mapbox/dark-v11",
+      style,
       center: [15.3078, -4.3195],
       zoom: 12.2,
       attributionControl: false,
+      failIfMajorPerformanceCaveat: false,
     });
     mapRef.current = map;
     map.on("click", (e) => onPick.current(e.lngLat.lng, e.lngLat.lat));
@@ -345,7 +332,7 @@ const QuoteMap = ({
       map.remove();
       mapRef.current = null;
     };
-  }, [token]);
+  }, [token, style]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -367,7 +354,7 @@ const QuoteMap = ({
 
   return (
     <div className="overflow-hidden rounded-xl border border-white/10">
-      <div ref={el} className="h-56 w-full sm:h-72" />
+      <div ref={el} className="h-56 w-full sm:h-72 vita-map bg-[#121212]" />
       <p className="bg-[#161616] px-3 py-2 text-[11px] text-white/40">Cliquez la carte pour le point de livraison.</p>
     </div>
   );

@@ -77,7 +77,7 @@ const DriverDashboard = () => {
       return;
     }
     await supabase.from("orders").update({ status }).eq("id", mission.id);
-    if (status === "IN_TRANSIT") {
+    if (status === "PICKED_UP") {
       await supabase.functions.invoke("issue-delivery-code", { body: { order_id: mission.id } });
     }
     load();

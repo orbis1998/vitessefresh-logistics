@@ -5,7 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 
 const AdminWhatsApp = () => {
   const [rows, setRows] = useState<any[]>([]);
-  const [status, setStatus] = useState("Démarrez le gateway Node (whatsapp-gateway) puis scannez le QR dans son terminal.");
 
   const load = () => {
     supabase.from("notifications").select("*").order("created_at", { ascending: false }).limit(80).then(({ data }) => setRows(data ?? []));
@@ -13,6 +12,8 @@ const AdminWhatsApp = () => {
 
   useEffect(() => {
     load();
+    const t = setInterval(load, 8000);
+    return () => clearInterval(t);
   }, []);
 
   const retry = async (id: string) => {
@@ -21,13 +22,15 @@ const AdminWhatsApp = () => {
   };
 
   return (
-    <DashboardLayout title="WhatsApp" subtitle="Outbox notifications — le code OTP n’apparaît pas ici">
-      <div className="rounded-xl border border-white/10 p-5 mb-6 text-sm text-white/70 space-y-2">
-        <p>{status}</p>
-        <p className="text-white/40">Commande : <code className="text-primary">cd whatsapp-gateway && npm install && npm start</code></p>
-        <Button size="sm" variant="outline" onClick={() => setStatus("Le QR s’affiche dans le terminal du gateway, pas dans le navigateur.")}>
-          Où est le QR ?
-        </Button>
+    <DashboardLayout title="WhatsApp" subtitle="Outbox Railway · le code OTP n'apparaît pas ici">
+      <div className="rounded-xl border border-white/10 p-5 mb-6 text-sm text-white/70 space-y-3">
+        <p>En production, le gateway tourne sur Railway (WhatsApp Cloud API). Il lit cette file toutes les 8 secondes.</p>
+        <p className="text-white/40">
+          Variables Railway : <code className="text-primary">SUPABASE_URL</code>, <code className="text-primary">SUPABASE_SERVICE_ROLE_KEY</code>,{" "}
+          <code className="text-primary">WA_ACCESS_TOKEN</code>, <code className="text-primary">WA_PHONE_NUMBER_ID</code>, optionnel{" "}
+          <code className="text-primary">WA_TEMPLATE_OTP</code> et <code className="text-primary">TWILIO_*</code> pour le SMS.
+        </p>
+        <p className="text-white/40">Déploiement : dossier <code className="text-primary">whatsapp-gateway</code> + Dockerfile. Healthcheck : /health</p>
       </div>
       <div className="rounded-xl border border-white/10 overflow-x-auto">
         <table className="w-full text-sm">
@@ -41,19 +44,23 @@ const AdminWhatsApp = () => {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
-              <tr key={r.id} className="border-t border-white/10">
-                <td className="p-3">{r.phone}</td>
-                <td className="p-3">{String(r.event_key || "").startsWith("otp-") ? "otp (corps masqué)" : r.event_key}</td>
-                <td className="p-3">{r.channel}</td>
-                <td className="p-3 text-primary">{r.status}{r.error ? ` · ${r.error}` : ""}</td>
-                <td className="p-3 text-right">
-                  {r.status !== "sent" && (
-                    <Button size="sm" variant="outline" onClick={() => retry(r.id)}>Relancer</Button>
-                  )}
-                </td>
-              </tr>
-            ))}
+            {rows.map((r) => {
+              const key = String(r.event_key || "");
+              const label = key.startsWith("otp-") ? "code remise" : key.startsWith("auth-") ? "code connexion" : key.startsWith("track-") ? "n° suivi" : key;
+              return (
+                <tr key={r.id} className="border-t border-white/10">
+                  <td className="p-3">{r.phone}</td>
+                  <td className="p-3">{label}</td>
+                  <td className="p-3">{r.channel}</td>
+                  <td className="p-3 text-primary">{r.status}{r.error ? ` · ${r.error}` : ""}</td>
+                  <td className="p-3 text-right">
+                    {r.status !== "sent" && (
+                      <Button size="sm" variant="outline" onClick={() => retry(r.id)}>Relancer</Button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

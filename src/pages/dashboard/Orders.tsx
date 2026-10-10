@@ -14,6 +14,7 @@ import MapView from "@/components/MapView";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useMapboxToken } from "@/hooks/useMapboxToken";
+import { reverseGeocode, searchKinshasa } from "@/lib/vita-map";
 import { haversineKm, computePriceFC } from "@/lib/distance";
 import { useToast } from "@/hooks/use-toast";
 import { detectMobileMoneyOperator, normalizeDrcPhone } from "@/lib/flexpay";
@@ -97,14 +98,11 @@ const Orders = () => {
 
   /* --- Mapbox geocoding --- */
   const searchPlaces = useCallback(async (query: string, setter: (s: Suggestion[]) => void, setLoading: (b: boolean) => void) => {
-    if (!query.trim() || !mapboxToken) return;
+    if (!query.trim()) return;
     setLoading(true);
     try {
-      const res = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${mapboxToken}&language=fr&country=cd&limit=5&bbox=15.1,-4.5,15.5,-4.2`
-      );
-      const data = await res.json();
-      setter(data.features?.map((f: any) => ({ place_name: f.place_name, center: f.center })) ?? []);
+      const hits = await searchKinshasa(query, mapboxToken);
+      setter(hits.map((f) => ({ place_name: f.place_name, center: f.center })));
     } catch {
       setter([]);
     } finally {
@@ -130,14 +128,10 @@ const Orders = () => {
       async (pos) => {
         const { latitude, longitude } = pos.coords;
         let address = "Ma position actuelle";
-        if (mapboxToken) {
-          try {
-            const res = await fetch(
-              `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${mapboxToken}&language=fr&limit=1`
-            );
-            const data = await res.json();
-            address = data.features?.[0]?.place_name || address;
-          } catch { /* ignore */ }
+        try {
+          address = await reverseGeocode(longitude, latitude, mapboxToken);
+        } catch {
+          /* ignore */
         }
         if (step === "pickup") {
           setPickup({ address, lat: latitude, lng: longitude });
@@ -197,23 +191,38 @@ const Orders = () => {
         height_cm: heightCm ? Number(heightCm) : null,
       },
     });
-    if (quoteErr || quote?.blocked || quote?.error) {
+    if (quote?.blocked) {
       setLoading(false);
-      toast({ title: "Hors zone ou devis refusé", description: quote?.error || quoteErr?.message, variant: "destructive" });
+      toast({ title: "Hors zone ou devis refusé", description: quote?.error || "Point hors zone", variant: "destructive" });
       return;
+    }
+    if (quoteErr && !quote?.totalFc) {
+      console.warn("quote-order indisponible, tarif local", quoteErr.message);
     }
     const total = quote?.totalFc ?? price;
     const dist = quote?.distanceKm ?? Number(distance.toFixed(2));
-    const { data: me } = await supabase.from("users").select("company_id, name, phone").eq("id", user.id).maybeSingle();
+    const { data: me } = await supabase
+      .from("users")
+      .select("company_id, name, phone")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then((res) => (res.error ? { data: null } : res));
 
+    const senderName = me?.name ?? user.user_metadata?.full_name ?? user.email ?? "Client";
+    const senderPhone = me?.phone ?? user.user_metadata?.phone ?? user.email ?? "client";
+    const destContact = recipientPhone.trim() || recipientName.trim() || "destinataire";
     const { data: created, error } = await supabase.from("orders").insert({
       client_id: user.id,
       pickup_address: pickup.address,
       pickup_lat: pickup.lat,
       pickup_lng: pickup.lng,
+      pickup_contact: senderPhone,
+      pickup_zone_id: quote?.pickupZoneId ?? null,
       delivery_address: dropoff.address,
       delivery_lat: dropoff.lat,
       delivery_lng: dropoff.lng,
+      delivery_contact: destContact,
+      delivery_zone_id: quote?.deliveryZoneId ?? null,
       distance: dist,
       base_price: 1500,
       total_price: total,
@@ -221,8 +230,8 @@ const Orders = () => {
       special_instructions: notes || null,
       recipient_name: recipientName || null,
       recipient_phone: recipientPhone || null,
-      sender_name: me?.name ?? user.user_metadata?.full_name ?? null,
-      sender_phone: me?.phone ?? user.user_metadata?.phone ?? null,
+      sender_name: senderName,
+      sender_phone: senderPhone,
       company_id: me?.company_id ?? null,
       pricing_version: quote?.version ?? null,
       weight_kg: weightKg ? Number(weightKg) : null,

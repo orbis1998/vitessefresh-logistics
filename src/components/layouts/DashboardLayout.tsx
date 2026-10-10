@@ -9,14 +9,14 @@ interface DashboardLayoutProps {
   subtitle?: string;
 }
 
-const DashboardLayout = ({ children, title, subtitle }: DashboardLayoutProps) => {
+const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, primaryRole, signOut, roles } = useAuth();
+  const { user, primaryRole, signOut } = useAuth();
 
   const role = primaryRole ?? "client";
   const menuItems = MENU_BY_ROLE[role] ?? MENU_BY_ROLE.client;
-  const ops = true;
+  const ops = role !== "entreprise";
   const isActive = (href: string) =>
     href === "/admin" || href === "/entreprise" || href === "/livreur" || href === "/dashboard"
       ? location.pathname === href
@@ -27,7 +27,11 @@ const DashboardLayout = ({ children, title, subtitle }: DashboardLayoutProps) =>
     navigate("/");
   };
 
-  const initials = (user?.email ?? "U").slice(0, 1).toUpperCase();
+  const page = menuItems.find((item) => isActive(item.href));
+  const pageLabel = page?.label ?? title ?? "Vita";
+  const identity = user?.phone || user?.email || ROLE_LABEL[role];
+  const chrome = ops ? "border-white/10 bg-[#0a0a0a]" : "border-border bg-card";
+  const mute = ops ? "text-white/40" : "text-muted-foreground";
 
   return (
     <div className={ops ? "min-h-screen bg-[#101214] text-white" : "theme-app min-h-screen bg-background text-foreground"}>
@@ -76,49 +80,63 @@ const DashboardLayout = ({ children, title, subtitle }: DashboardLayoutProps) =>
         </button>
       </aside>
 
-      <header
-        className={`lg:hidden sticky top-0 z-40 flex h-14 items-center justify-between border-b px-4 ${
-          ops ? "border-white/10 bg-[#0a0a0a]" : "border-border bg-card"
-        }`}
-      >
-        <div className="flex items-center gap-2.5 min-w-0">
-          <span className="font-heading font-bold text-primary text-sm">VE</span>
-          <div className="min-w-0">
-            <p className="font-heading text-sm font-semibold leading-none">{title}</p>
-            {subtitle && (
-              <p className={`text-[11px] mt-0.5 ${ops ? "text-white/45" : "text-muted-foreground"}`}>{subtitle}</p>
-            )}
-          </div>
-        </div>
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
-          {initials}
+      <header className={`lg:hidden sticky top-0 z-40 border-b ${chrome}`}>
+        <div className="h-[2px] bg-primary" />
+        <div className="h-14 px-4 flex items-center gap-3">
+          <Link to={HOME_BY_ROLE[role]} className="flex items-center gap-2 shrink-0">
+            <span className="h-4 w-[3px] bg-primary" />
+            <span className="font-heading text-[15px] font-bold tracking-tight leading-none">
+              Vita <span className={ops ? "text-white/90" : "text-foreground"}>Express</span>
+            </span>
+          </Link>
+          <span className={`hidden sm:block h-4 w-px ${ops ? "bg-white/15" : "bg-border"}`} />
+          <p className="min-w-0 flex-1 font-heading text-[15px] font-semibold tracking-tight truncate">
+            {pageLabel}
+          </p>
+          <p className={`hidden sm:block shrink-0 font-mono text-[10px] tracking-[0.16em] uppercase ${mute}`}>
+            {ROLE_LABEL[role]}
+          </p>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className={`shrink-0 inline-flex items-center gap-1.5 h-8 px-2.5 font-mono text-[10px] tracking-[0.14em] uppercase border ${
+              ops
+                ? "border-white/15 text-white/70 hover:text-white hover:border-white/40"
+                : "border-border text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <LogOut className="w-3.5 h-3.5" strokeWidth={1.8} />
+            <span className="hidden sm:inline">Sortir</span>
+          </button>
         </div>
       </header>
 
       <main className="lg:ml-[200px] min-h-screen pb-24 lg:pb-0">
-        {(title || subtitle) && (
-          <header
-            className={`hidden lg:flex h-[64px] items-center justify-between px-8 border-b ${
-              ops ? "border-white/10 bg-[#0a0a0a]/80" : "border-border bg-card"
-            }`}
-          >
-            <div>
-              <h1 className="text-lg font-heading font-semibold">{title}</h1>
-              {subtitle && (
-                <p className={`text-sm ${ops ? "text-white/45" : "text-muted-foreground"}`}>{subtitle}</p>
-              )}
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <p className="text-sm font-medium truncate max-w-[180px]">{user?.email}</p>
-                <p className={`text-xs ${ops ? "text-white/40" : "text-muted-foreground"}`}>{ROLE_LABEL[role]}</p>
-              </div>
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
-                {initials}
-              </div>
-            </div>
-          </header>
-        )}
+        <header className={`hidden lg:flex h-16 items-center justify-between px-8 border-b ${chrome}`}>
+          <div className="min-w-0">
+            <p className={`font-mono text-[10px] tracking-[0.2em] uppercase ${mute}`}>
+              {ROLE_LABEL[role]}
+            </p>
+            <h1 className="font-heading text-[22px] font-bold tracking-tight leading-none mt-1">
+              {pageLabel}
+            </h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <p className={`font-mono text-xs truncate max-w-[220px] ${mute}`}>{identity}</p>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className={`inline-flex items-center gap-1.5 h-8 px-3 font-mono text-[10px] tracking-wider uppercase border ${
+                ops
+                  ? "border-white/15 text-white/60 hover:text-white hover:border-white/40"
+                  : "border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <LogOut className="w-3.5 h-3.5" strokeWidth={1.8} />
+              Sortir
+            </button>
+          </div>
+        </header>
         <div className="p-4 lg:p-8">{children}</div>
       </main>
 

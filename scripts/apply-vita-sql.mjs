@@ -11,6 +11,9 @@ const files = [
   "supabase/migrations/20261009200000_vita_enum_extend.sql",
   "supabase/migrations/20261009200001_vita_ops_extend.sql",
   "supabase/migrations/20261009200002_vita_rpc_rls.sql",
+  "supabase/migrations/20261009220000_fix_users_rls_recursion.sql",
+  "supabase/migrations/20261009230000_fix_order_required_cols.sql",
+  "supabase/migrations/20261010100000_phone_otp_pickup_track.sql",
 ];
 
 for (const file of files) {
