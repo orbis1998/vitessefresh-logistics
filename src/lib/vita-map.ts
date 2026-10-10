@@ -4,55 +4,32 @@ import { useMapboxToken } from "@/hooks/useMapboxToken";
 
 export const KINSHASA: [number, number] = [15.3078, -4.3276];
 
-export const CARTO_DARK_STYLE: StyleSpecification = {
+const MAPBOX_DARK = "mapbox://styles/mapbox/dark-v11";
+
+const ESRI_DARK_STYLE: StyleSpecification = {
   version: 8,
-  name: "vita-dark",
+  name: "vita-esri-dark",
   sources: {
-    carto: {
+    esri: {
       type: "raster",
       tiles: [
-        "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
-        "https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
-        "https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
+        "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
       ],
       tileSize: 256,
-      attribution: "© OpenStreetMap © CARTO",
+      attribution: "© Esri",
     },
   },
-  layers: [{ id: "carto-dark", type: "raster", source: "carto" }],
+  layers: [{ id: "esri-dark", type: "raster", source: "esri" }],
 };
 
-let resolvedStyle: string | StyleSpecification | null = null;
-let styleInflight: Promise<string | StyleSpecification> | null = null;
-
 export function resolveVitaMapStyle(token: string | null) {
-  if (resolvedStyle) return Promise.resolve(resolvedStyle);
-  if (styleInflight) return styleInflight;
-  styleInflight = (async () => {
-    if (token) {
-      try {
-        const r = await fetch(
-          `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/1/0/0.vector.pbf?access_token=${encodeURIComponent(token)}`,
-        );
-        if (r.ok) {
-          resolvedStyle = "mapbox://styles/mapbox/dark-v11";
-          return resolvedStyle;
-        }
-      } catch {
-        /* Carto */
-      }
-    }
-    resolvedStyle = CARTO_DARK_STYLE;
-    return resolvedStyle;
-  })();
-  return styleInflight.finally(() => {
-    styleInflight = null;
-  });
+  if (token) return Promise.resolve(MAPBOX_DARK);
+  return Promise.resolve(ESRI_DARK_STYLE);
 }
 
 export function useVitaMapStyle() {
   const { token, loading } = useMapboxToken();
-  const [style, setStyle] = useState<string | StyleSpecification | null>(resolvedStyle);
+  const [style, setStyle] = useState<string | StyleSpecification | null>(null);
 
   useEffect(() => {
     let live = true;
