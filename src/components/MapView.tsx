@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import { Loader2 } from "lucide-react";
-import { isLngLat, KINSHASA, reverseGeocode, useVitaMapStyle } from "@/lib/vita-map";
+import { bindMapToken, isLngLat, KINSHASA, reverseGeocode, VITA_BASEMAP, useVitaMapStyle } from "@/lib/vita-map";
 
 interface MapViewProps {
   center?: [number, number];
@@ -39,16 +39,16 @@ const MapView = ({
   const markerObjs = useRef<mapboxgl.Marker[]>([]);
   const onSelectRef = useRef(onLocationSelect);
   onSelectRef.current = onLocationSelect;
-  const { token, style, loading: styleLoading } = useVitaMapStyle();
+  const { token } = useVitaMapStyle();
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const node = mapContainer.current;
-    if (!node || !style || map.current) return;
-    if (token) mapboxgl.accessToken = token;
+    if (!node || map.current) return;
+    bindMapToken(token);
     const instance = new mapboxgl.Map({
       container: node,
-      style,
+      style: VITA_BASEMAP,
       center: isLngLat(center) ? center : KINSHASA,
       zoom,
       attributionControl: false,
@@ -82,7 +82,7 @@ const MapView = ({
       setReady(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [style, token, readonly]);
+  }, [readonly]);
 
   useEffect(() => {
     const instance = map.current;
@@ -143,7 +143,7 @@ const MapView = ({
   return (
     <div className={`relative w-full min-h-[240px] h-full vita-map ${className}`}>
       <div ref={mapContainer} className="absolute inset-0 rounded-xl overflow-hidden bg-[#121212]" />
-      {(loading || styleLoading) && (
+      {loading && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#0c0c0c]/70 rounded-xl">
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
         </div>

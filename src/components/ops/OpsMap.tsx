@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
-import { isLngLat, useVitaMapStyle } from "@/lib/vita-map";
+import { bindMapToken, isLngLat, VITA_BASEMAP, useVitaMapStyle } from "@/lib/vita-map";
 
 export type OpsMarker = {
   id: string;
@@ -22,19 +22,19 @@ const OpsMap = ({
   const el = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const marks = useRef<mapboxgl.Marker[]>([]);
-  const { token, style } = useVitaMapStyle();
+  const { token } = useVitaMapStyle();
 
   useEffect(() => {
     const node = el.current;
-    if (!node || !style) return;
-    if (token) mapboxgl.accessToken = token;
+    if (!node) return;
+    bindMapToken(token);
     const map = new mapboxgl.Map({
       container: node,
-      style,
+      style: VITA_BASEMAP,
       center: [15.3078, -4.3195],
       zoom: 11.6,
-      pitch: style === "mapbox://styles/mapbox/dark-v11" ? pitch : 0,
-      bearing: style === "mapbox://styles/mapbox/dark-v11" ? 18 : 0,
+      pitch: 0,
+      bearing: 0,
       attributionControl: false,
       failIfMajorPerformanceCaveat: false,
     });
@@ -52,7 +52,7 @@ const OpsMap = ({
       map.remove();
       mapRef.current = null;
     };
-  }, [token, style, pitch]);
+  }, []);
 
   useEffect(() => {
     const map = mapRef.current;

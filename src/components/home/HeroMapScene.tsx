@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
-import { drivingRoute, useVitaMapStyle } from "@/lib/vita-map";
+import { bindMapToken, drivingRoute, VITA_BASEMAP } from "@/lib/vita-map";
 import { haversineKm } from "@/lib/distance";
 
 const GOMBE: [number, number] = [15.3078, -4.3195];
@@ -74,44 +74,23 @@ const courierEl = () => {
   return el;
 };
 
-const addBuildings = (map: mapboxgl.Map) => {
-  if (map.getLayer("hero-buildings") || !map.getSource("composite")) return;
-  map.addLayer({
-    id: "hero-buildings",
-    source: "composite",
-    "source-layer": "building",
-    filter: ["==", ["get", "extrude"], "true"],
-    type: "fill-extrusion",
-    minzoom: 13,
-    paint: {
-      "fill-extrusion-color": "#1a1c1f",
-      "fill-extrusion-height": ["coalesce", ["get", "height"], 16],
-      "fill-extrusion-base": ["coalesce", ["get", "min_height"], 0],
-      "fill-extrusion-opacity": 0.88,
-    },
-  });
-};
-
 const HeroMapScene = () => {
   const rootRef = useRef<HTMLDivElement>(null);
   const mapEl = useRef<HTMLDivElement>(null);
-  const { token, style } = useVitaMapStyle();
-
   useEffect(() => {
     const node = mapEl.current;
-    if (!node || !style) return;
+    if (!node) return;
 
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (token) mapboxgl.accessToken = token;
-    const vector = style === "mapbox://styles/mapbox/dark-v11";
+    bindMapToken();
 
     const map = new mapboxgl.Map({
       container: node,
-      style,
+      style: VITA_BASEMAP,
       center: [15.328, -4.345],
       zoom: 14.2,
-      pitch: vector ? 58 : 0,
-      bearing: vector ? 24 : 0,
+      pitch: 0,
+      bearing: 0,
       interactive: false,
       attributionControl: true,
       logoPosition: "bottom-right",
@@ -208,16 +187,14 @@ const HeroMapScene = () => {
     const boot = () => {
       if (cancelled) return;
       map.resize();
-      if (vector) addBuildings(map);
     };
 
     map.on("style.load", boot);
     map.on("load", async () => {
       if (cancelled) return;
       map.resize();
-      if (vector) addBuildings(map);
       try {
-        const data = await drivingRoute(GOMBE, LIMETE, token);
+        const data = await drivingRoute(GOMBE, LIMETE);
         paintRoute(data?.coordinates?.length ? data.coordinates : FALLBACK_ROUTE);
       } catch {
         paintRoute(FALLBACK_ROUTE);
@@ -254,7 +231,7 @@ const HeroMapScene = () => {
       courier.remove();
       map.remove();
     };
-  }, [token, style]);
+  }, []);
 
   return (
     <div ref={rootRef} className="absolute inset-0 overflow-hidden bg-[#101214]" aria-hidden="true">

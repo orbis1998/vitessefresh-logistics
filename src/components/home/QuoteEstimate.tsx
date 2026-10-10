@@ -4,7 +4,7 @@ import { ArrowRight, Loader2, LocateFixed } from "lucide-react";
 import mapboxgl from "mapbox-gl";
 import { Button } from "@/components/ui/button";
 import { useMapboxToken } from "@/hooks/useMapboxToken";
-import { reverseGeocode, searchKinshasa, useVitaMapStyle } from "@/lib/vita-map";
+import { bindMapToken, reverseGeocode, searchKinshasa, VITA_BASEMAP } from "@/lib/vita-map";
 import { useAuth } from "@/hooks/useAuth";
 import { computePriceFC, estimateMinutes, formatFC, haversineKm } from "@/lib/distance";
 
@@ -308,14 +308,12 @@ const QuoteMap = ({
   const dropMk = useRef<mapboxgl.Marker | null>(null);
   const onPick = useRef(onPickDropoff);
   onPick.current = onPickDropoff;
-  const { style } = useVitaMapStyle();
-
   useEffect(() => {
-    if (!el.current || !style) return;
-    if (token) mapboxgl.accessToken = token;
+    if (!el.current) return;
+    bindMapToken(token);
     const map = new mapboxgl.Map({
       container: el.current,
-      style,
+      style: VITA_BASEMAP,
       center: [15.3078, -4.3195],
       zoom: 12.2,
       attributionControl: false,
@@ -332,7 +330,7 @@ const QuoteMap = ({
       map.remove();
       mapRef.current = null;
     };
-  }, [token, style]);
+  }, [token]);
 
   useEffect(() => {
     const map = mapRef.current;
