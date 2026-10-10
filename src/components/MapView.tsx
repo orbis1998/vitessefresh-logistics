@@ -1,15 +1,25 @@
 import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import { Loader2 } from "lucide-react";
-import { bindMapToken, isLngLat, KINSHASA, reverseGeocode, VITA_BASEMAP, useVitaMapStyle } from "@/lib/vita-map";
+import {
+  addVitaBuildings,
+  bindMapToken,
+  ESRI_STREETS,
+  isLngLat,
+  KINSHASA,
+  reverseGeocode,
+  VITA_BASEMAP,
+  useVitaMapStyle,
+} from "@/lib/vita-map";
 
 interface MapViewProps {
   center?: [number, number];
   zoom?: number;
+  pitch?: number;
   markers?: Array<{
     coordinates: [number, number];
     popup?: string;
-    type?: "pickup" | "delivery" | "driver";
+    type?: "pickup" | "delivery" | "driver" | "parcel" | "drop";
   }>;
   showDriverLocation?: boolean;
   driverLocation?: [number, number];
@@ -21,9 +31,17 @@ interface MapViewProps {
   loading?: boolean;
 }
 
+const pinClass = (kind: string) => {
+  if (kind === "pickup") return "vita-pin vita-pin--pickup";
+  if (kind === "delivery" || kind === "drop") return "vita-pin vita-pin--drop";
+  if (kind === "parcel") return "vita-pin vita-pin--parcel";
+  return "vita-pin vita-pin--driver";
+};
+
 const MapView = ({
   center = KINSHASA,
-  zoom = 12,
+  zoom = 13.2,
+  pitch = 52,
   markers = [],
   showDriverLocation = false,
   driverLocation,
@@ -41,28 +59,44 @@ const MapView = ({
   onSelectRef.current = onLocationSelect;
   const { token } = useVitaMapStyle();
   const [ready, setReady] = useState(false);
+  const [invert, setInvert] = useState(false);
 
   useEffect(() => {
     const node = mapContainer.current;
     if (!node || map.current) return;
     bindMapToken(token);
+    let fellBack = false;
     const instance = new mapboxgl.Map({
       container: node,
       style: VITA_BASEMAP,
       center: isLngLat(center) ? center : KINSHASA,
       zoom,
+      pitch,
+      bearing: 22,
+      antialias: true,
       attributionControl: false,
       failIfMajorPerformanceCaveat: false,
     });
-    instance.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
+    instance.addControl(new mapboxgl.NavigationControl({ showCompass: false, visualizePitch: true }), "top-right");
     const kick = () => {
       if (node.clientWidth > 0 && node.clientHeight > 0) instance.resize();
     };
-    instance.on("load", () => {
+    const onReady = () => {
       kick();
+      addVitaBuildings(instance);
       setReady(true);
+    };
+    instance.on("load", onReady);
+    instance.on("style.load", () => addVitaBuildings(instance));
+    instance.on("error", () => {
+      if (fellBack) {
+        setReady(true);
+        return;
+      }
+      fellBack = true;
+      setInvert(true);
+      instance.setStyle(ESRI_STREETS);
     });
-    instance.on("error", () => setReady(true));
     instance.on("click", async (e) => {
       const select = onSelectRef.current;
       if (!select || readonly) return;
@@ -92,10 +126,9 @@ const MapView = ({
     const add = (lngLat: [number, number], kind: string, popup?: string) => {
       if (!isLngLat(lngLat)) return;
       const el = document.createElement("div");
-      el.className =
-        kind === "pickup" ? "ops-pin ops-pin--pickup" : kind === "delivery" || kind === "drop" ? "ops-pin ops-pin--drop" : "ops-pin ops-pin--driver";
-      const mk = new mapboxgl.Marker({ element: el }).setLngLat(lngLat);
-      if (popup) mk.setPopup(new mapboxgl.Popup({ offset: 12 }).setText(popup));
+      el.className = pinClass(kind);
+      el.innerHTML = `<i></i><em>${popup || ""}</em>`;
+      const mk = new mapboxgl.Marker({ element: el, anchor: "bottom" }).setLngLat(lngLat);
       mk.addTo(instance);
       markerObjs.current.push(mk);
     };
@@ -109,14 +142,14 @@ const MapView = ({
       const b = new mapboxgl.LngLatBounds(pts[0], pts[0]);
       pts.forEach((p) => b.extend(p));
       try {
-        instance.fitBounds(b, { padding: 56, maxZoom: 14, duration: 400 });
+        instance.fitBounds(b, { padding: 72, maxZoom: 15, duration: 500, pitch, bearing: 18 });
       } catch {
         /* ignore */
       }
     } else if (pts.length === 1) {
-      instance.easeTo({ center: pts[0], zoom: 13.4, duration: 350 });
+      instance.easeTo({ center: pts[0], zoom: 14.2, pitch, duration: 400 });
     }
-  }, [markers, showDriverLocation, driverLocation, ready]);
+  }, [markers, showDriverLocation, driverLocation, ready, pitch]);
 
   useEffect(() => {
     const instance = map.current;
@@ -133,7 +166,7 @@ const MapView = ({
         type: "line",
         source: "route",
         layout: { "line-join": "round", "line-cap": "round" },
-        paint: { "line-color": "#FFC400", "line-width": 4, "line-opacity": 0.85 },
+        paint: { "line-color": "#FFC400", "line-width": 5, "line-opacity": 0.92 },
       });
     };
     if (instance.isStyleLoaded()) draw();
@@ -141,16 +174,16 @@ const MapView = ({
   }, [route, ready]);
 
   return (
-    <div className={`relative w-full min-h-[240px] h-full vita-map ${className}`}>
-      <div ref={mapContainer} className="absolute inset-0 rounded-xl overflow-hidden bg-[#121212]" />
+    <div className={`relative w-full min-h-[280px] h-full vita-map ${invert ? "vita-map--invert" : ""} ${className}`}>
+      <div ref={mapContainer} className="absolute inset-0 overflow-hidden bg-[#0b0c0e]" />
       {loading && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#0c0c0c]/70 rounded-xl">
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#0b0c0e]/70">
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
         </div>
       )}
       {estimatedTime ? (
-        <div className="absolute bottom-3 left-3 z-10 rounded-full bg-black/80 border border-white/10 px-3 py-1.5 text-xs">
-          Arrivée ~ {estimatedTime} min
+        <div className="absolute bottom-3 right-3 z-10 rounded-full bg-[#0b0c0e]/90 px-3 py-1.5 text-xs font-medium">
+          ~ {estimatedTime} min
         </div>
       ) : null}
     </div>

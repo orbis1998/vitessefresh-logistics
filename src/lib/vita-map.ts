@@ -4,10 +4,12 @@ import { useMapboxToken } from "@/hooks/useMapboxToken";
 
 export const KINSHASA: [number, number] = [15.3078, -4.3276];
 
-/** Street basemap without API key (Esri). Mapbox tiles stay 403 on this project. */
-export const VITA_BASEMAP: StyleSpecification = {
+/** Dark vector style, no Mapbox key. */
+export const VITA_BASEMAP = "https://tiles.openfreemap.org/styles/dark";
+
+export const ESRI_STREETS: StyleSpecification = {
   version: 8,
-  name: "vita-streets",
+  name: "vita-esri",
   sources: {
     streets: {
       type: "raster",
@@ -20,6 +22,29 @@ export const VITA_BASEMAP: StyleSpecification = {
   },
   layers: [{ id: "streets", type: "raster", source: "streets" }],
 };
+
+export function addVitaBuildings(map: mapboxgl.Map) {
+  if (map.getLayer("vita-buildings")) return;
+  const src = map.getSource("openmaptiles") ? "openmaptiles" : map.getSource("composite") ? "composite" : null;
+  if (!src) return;
+  try {
+    map.addLayer({
+      id: "vita-buildings",
+      source: src,
+      "source-layer": "building",
+      type: "fill-extrusion",
+      minzoom: 13,
+      paint: {
+        "fill-extrusion-color": "#1a1c20",
+        "fill-extrusion-height": ["coalesce", ["get", "render_height"], ["get", "height"], 14],
+        "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], ["get", "min_height"], 0],
+        "fill-extrusion-opacity": 0.86,
+      },
+    });
+  } catch {
+    /* raster */
+  }
+}
 
 export function bindMapToken(token?: string | null) {
   mapboxgl.accessToken = token || "pk.vita";

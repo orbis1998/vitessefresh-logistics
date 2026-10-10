@@ -7,9 +7,10 @@ interface DashboardLayoutProps {
   children: React.ReactNode;
   title?: string;
   subtitle?: string;
+  flush?: boolean;
 }
 
-const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
+const DashboardLayout = ({ children, title, flush }: DashboardLayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, primaryRole, signOut } = useAuth();
@@ -137,7 +138,7 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
             </button>
           </div>
         </header>
-        <div className="p-4 lg:p-8">{children}</div>
+        <div className={flush ? "" : "p-4 lg:p-8"}>{children}</div>
       </main>
 
       <nav

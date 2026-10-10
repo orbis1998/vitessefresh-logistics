@@ -8,6 +8,7 @@ import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import MapView from "@/components/MapView";
+import MissionSheet from "@/components/ops/MissionSheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useMapboxToken } from "@/hooks/useMapboxToken";
@@ -170,6 +171,55 @@ const Tracking = () => {
         ...(driverLoc ? [{ coordinates: [driverLoc.lng, driverLoc.lat] as [number, number], type: "driver" as const, popup: "Livreur" }] : []),
       ]
     : [];
+
+  const etaLabel = estimatedTime
+    ? estimatedTime < 60
+      ? `${Math.round(estimatedTime)} s`
+      : estimatedTime < 3600
+        ? `${Math.round(estimatedTime / 60)} min`
+        : `${Math.round(estimatedTime / 3600)} h`
+    : undefined;
+
+  if (orderId && order) {
+    const st = String(order.status).toUpperCase();
+    return (
+      <DashboardLayout title="Suivi en direct" flush>
+        <div className="relative h-[calc(100dvh-3.5rem-6rem)] lg:h-[calc(100dvh-4rem)] bg-[#0b0c0e]">
+          <MapView
+            markers={markers}
+            route={route ?? []}
+            readonly
+            pitch={54}
+            className="absolute inset-0 rounded-none min-h-0"
+            center={markers[0]?.coordinates}
+          />
+          <div className="pointer-events-none absolute inset-0 z-10 p-3 sm:p-5 lg:p-8 flex flex-col justify-end lg:justify-start">
+            <MissionSheet
+              number={order.order_number}
+              status={STATUS_META[st]?.label || st}
+              eta={etaLabel}
+              points={[
+                { kind: "pickup", title: order.pickup_address || "Ramassage", detail: "Lieu du ramassage", active: ["SUBMITTED", "ACCEPTED", "ASSIGNED", "COLLECTING"].includes(st) },
+                { kind: "parcel", title: order.package_description || "Colis", detail: order.order_number || "En course", active: st === "PICKED_UP" || st === "IN_TRANSIT" },
+                { kind: "driver", title: gpsActive ? "Livreur en mouvement" : "Livreur", detail: gpsActive ? "GPS live" : "En attente GPS", active: Boolean(gpsActive) },
+                { kind: "drop", title: order.recipient_name || "Destinataire", detail: order.delivery_address || "Remise", active: st === "IN_TRANSIT" },
+              ]}
+            />
+            <div className="pointer-events-auto mt-3 flex flex-wrap gap-2">
+              <Button variant="ghost" size="icon" onClick={refreshDriverLoc} disabled={refreshing} className="bg-black/50">
+                <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+              </Button>
+              {st !== "DELIVERED" && st !== "CANCELLED" ? (
+                <Button size="sm" className="bg-green-600 hover:bg-green-500 text-white" onClick={handleShareWhatsApp}>
+                  <Share2 className="w-3.5 h-3.5 mr-1.5" /> Destinataire
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout title="Suivi en direct" subtitle="Position du livreur en temps réel">
