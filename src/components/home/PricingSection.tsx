@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
-import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { VitaCheckIcon } from "@/components/brand/VitaIcons";
 import { plans } from "@/data/plans";
 
 const PricingSection = () => {
@@ -27,13 +27,15 @@ const PricingSection = () => {
             >
               <p className="text-sm font-medium">{plan.name}</p>
               <p className="mt-4 font-heading text-3xl font-bold">{plan.price}</p>
-              <p className={`text-sm mt-1 ${plan.featured ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                {plan.hint}
-              </p>
+              {plan.hint && (
+                <p className={`text-sm mt-1 ${plan.featured ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                  {plan.hint}
+                </p>
+              )}
               <ul className="mt-6 space-y-2.5 flex-1">
                 {plan.features.map((feature) => (
                   <li key={feature} className="flex items-start gap-2 text-sm">
-                    <Check className="w-4 h-4 mt-0.5 shrink-0" strokeWidth={2} />
+                    <VitaCheckIcon className="w-4 h-4 mt-0.5 shrink-0" />
                     {feature}
                   </li>
                 ))}

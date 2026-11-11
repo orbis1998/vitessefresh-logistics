@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff } from "lucide-react";
+import { VitaEyeIcon as Eye, VitaEyeOffIcon as EyeOff } from "@/components/brand/VitaIcons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,8 @@ import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import PhoneAuth from "@/components/auth/PhoneAuth";
 import { normalizeDrcPhone } from "@/lib/flexpay";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
+import { getPostAuthPath } from "@/lib/auth";
 
 const scorePassword = (password: string) => {
   if (!password) return 0;
@@ -44,8 +46,15 @@ const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user, loading: authLoading, roles } = useAuth();
 
   const strength = scorePassword(formData.password);
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate(getPostAuthPath(roles), { replace: true });
+    }
+  }, [authLoading, navigate, roles, user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -103,9 +112,6 @@ const Register = () => {
 
   return (
     <AuthLayout title="Inscription">
-      <p className="text-sm text-muted-foreground -mt-4 mb-6">
-        Compte avec votre numéro. Le code arrive sur WhatsApp.
-      </p>
       <div className="space-y-4 mb-6">
         <div className="space-y-2">
           <Label htmlFor="fullName">Nom complet</Label>

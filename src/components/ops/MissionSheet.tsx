@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 export type MissionPoint = {
@@ -20,14 +21,20 @@ const MissionSheet = ({
   eta,
   points,
   href,
+  ctaLabel = "Orienter le suivi",
+  children,
+  wide,
 }: {
   number?: string;
   status: string;
   eta?: string;
   points: MissionPoint[];
   href?: string;
+  ctaLabel?: string;
+  children?: ReactNode;
+  wide?: boolean;
 }) => (
-  <aside className="vita-sheet pointer-events-auto">
+  <aside className={`vita-sheet pointer-events-auto ${wide ? "vita-sheet--wide" : ""}`}>
     <div className="vita-sheet__bezel">
       <div className="vita-sheet__core">
         <div className="flex items-end justify-between gap-3">
@@ -56,9 +63,11 @@ const MissionSheet = ({
           ))}
         </ol>
 
+        {children ? <div className="vita-sheet__actions">{children}</div> : null}
+
         {href ? (
           <Link to={href} className="vita-sheet__cta">
-            Orienter le suivi
+            {ctaLabel}
             <span>→</span>
           </Link>
         ) : null}

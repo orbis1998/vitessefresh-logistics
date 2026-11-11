@@ -1,13 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
-import OpsMap, { type OpsMarker } from "@/components/ops/OpsMap";
+import MapView from "@/components/MapView";
+import MissionSheet from "@/components/ops/MissionSheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { canTransition, statusLabel, toVitaStatus } from "@/lib/status";
+import { drivingRoute, isLngLat, VITA_MAP_4D } from "@/lib/vita-map";
 
 const DriverDashboard = () => {
   const { user } = useAuth();
@@ -17,6 +19,10 @@ const DriverDashboard = () => {
   const [otp, setOtp] = useState("");
   const [earned, setEarned] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [selfLoc, setSelfLoc] = useState<[number, number] | null>(null);
+  const [heading, setHeading] = useState<number | null>(null);
+  const [route, setRoute] = useState<Array<[number, number]>>([]);
+  const [etaMin, setEtaMin] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -49,16 +55,23 @@ const DriverDashboard = () => {
 
   useEffect(() => {
     if (!user || !driver) return;
-    const watch = navigator.geolocation?.watchPosition((pos) => {
-      supabase.from("driver_pings").upsert({
-        driver_id: user.id,
-        latitude: pos.coords.latitude,
-        longitude: pos.coords.longitude,
-        heading: pos.coords.heading,
-        speed: pos.coords.speed,
-        updated_at: new Date().toISOString(),
-      });
-    });
+    const watch = navigator.geolocation?.watchPosition(
+      (pos) => {
+        const next: [number, number] = [pos.coords.longitude, pos.coords.latitude];
+        setSelfLoc(next);
+        setHeading(typeof pos.coords.heading === "number" ? pos.coords.heading : null);
+        supabase.from("driver_pings").upsert({
+          driver_id: user.id,
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          heading: pos.coords.heading,
+          speed: pos.coords.speed,
+          updated_at: new Date().toISOString(),
+        });
+      },
+      undefined,
+      { enableHighAccuracy: true, maximumAge: 4000, timeout: 12000 },
+    );
     return () => {
       if (typeof watch === "number") navigator.geolocation.clearWatch(watch);
     };
@@ -104,65 +117,188 @@ const DriverDashboard = () => {
     load();
   };
 
+  const st = mission ? toVitaStatus(mission.status) : "";
+  const pickup =
+    mission && isLngLat([Number(mission.pickup_lng), Number(mission.pickup_lat)])
+      ? ([Number(mission.pickup_lng), Number(mission.pickup_lat)] as [number, number])
+      : null;
+  const drop =
+    mission && isLngLat([Number(mission.delivery_lng), Number(mission.delivery_lat)])
+      ? ([Number(mission.delivery_lng), Number(mission.delivery_lat)] as [number, number])
+      : null;
+
+  useEffect(() => {
+    const from = selfLoc || pickup;
+    const to = st === "PICKED_UP" || st === "IN_TRANSIT" ? drop : pickup;
+    if (!from || !to) {
+      setRoute([]);
+      setEtaMin(null);
+      return;
+    }
+    let live = true;
+    drivingRoute(from, to).then((res) => {
+      if (!live || !res) return;
+      setRoute(res.coordinates);
+      setEtaMin(res.durationSec ? Math.max(1, Math.round(res.durationSec / 60)) : null);
+    });
+    return () => {
+      live = false;
+    };
+  }, [selfLoc?.[0], selfLoc?.[1], pickup?.[0], pickup?.[1], drop?.[0], drop?.[1], st]);
+
+  const markers = useMemo(() => {
+    const list: Array<{
+      coordinates: [number, number];
+      type: "pickup" | "delivery" | "driver" | "parcel";
+      popup: string;
+      heading?: number | null;
+    }> = [];
+    if (pickup) list.push({ coordinates: pickup, type: "pickup", popup: "Ramassage" });
+    if (drop) list.push({ coordinates: drop, type: "delivery", popup: "Destinataire" });
+    if (selfLoc) list.push({ coordinates: selfLoc, type: "driver", popup: "Moi", heading });
+    if (st === "PICKED_UP" || st === "IN_TRANSIT") {
+      list.push({ coordinates: selfLoc || pickup || drop!, type: "parcel", popup: "Colis" });
+    } else if (pickup) {
+      list.push({ coordinates: pickup, type: "parcel", popup: "Colis" });
+    }
+    return list.filter((m) => isLngLat(m.coordinates));
+  }, [pickup, drop, selfLoc, heading, st]);
+
+  const points = mission
+    ? [
+        {
+          kind: "pickup" as const,
+          title: mission.pickup_address || "Point de retrait",
+          detail: "Aller collecter le colis",
+          active: ["ASSIGNED", "ACCEPTED", "COLLECTING"].includes(st),
+        },
+        {
+          kind: "parcel" as const,
+          title: mission.package_description || "Colis à bord",
+          detail: mission.order_number || "Identifiant course",
+          active: st === "PICKED_UP" || st === "IN_TRANSIT" || st === "COLLECTING",
+        },
+        {
+          kind: "driver" as const,
+          title: selfLoc ? "Ma position GPS" : "GPS inactif",
+          detail: selfLoc ? "Flux live 4D" : "Autorisez la localisation",
+          active: Boolean(selfLoc),
+        },
+        {
+          kind: "drop" as const,
+          title: mission.recipient_name || "Destinataire",
+          detail: `${mission.delivery_address || "Remise"}${mission.recipient_phone ? ` · ${mission.recipient_phone}` : ""}`,
+          active: st === "IN_TRANSIT",
+        },
+      ]
+    : [
+        { kind: "pickup" as const, title: "En attente", detail: "Pas de course attribuée" },
+        { kind: "parcel" as const, title: "Colis", detail: "Apparaitra avec la mission" },
+        { kind: "driver" as const, title: "Livreur", detail: driver?.available ? "En ligne" : "Hors ligne" },
+        { kind: "drop" as const, title: "Destinataire", detail: "Prochaine remise" },
+      ];
+
   if (loading) {
     return (
-      <DashboardLayout>
-        <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+      <DashboardLayout flush>
+        <div className="flex h-[calc(100dvh-3.5rem-5.5rem)] md:h-[calc(100dvh-4rem)] items-center justify-center bg-[#0b0c0e]">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        </div>
       </DashboardLayout>
     );
   }
 
-  const st = mission ? toVitaStatus(mission.status) : "";
-  const markers: OpsMarker[] = mission
-    ? [
-        { id: "p", lng: Number(mission.pickup_lng), lat: Number(mission.pickup_lat), kind: "pickup", label: mission.pickup_address },
-        { id: "d", lng: Number(mission.delivery_lng), lat: Number(mission.delivery_lat), kind: "drop", label: mission.delivery_address },
-      ]
-    : [];
+  if (!driver) {
+    return (
+      <DashboardLayout title="Mission">
+        <div className="vita-panel-card rounded-xl p-8 max-w-lg">
+          <h2 className="font-heading text-xl font-semibold">Activer le profil livreur</h2>
+          <p className="mt-2 text-sm text-white/50">Une fois actif, la carte 4D affichera vos colis et votre trajet.</p>
+          <Button className="mt-6" onClick={createDriverProfile}>
+            Créer mon profil
+          </Button>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
-    <DashboardLayout title="Mission" subtitle="Une course à la fois — le code n’est pas affiché">
-      {!driver ? (
-        <div className="rounded-xl border border-white/10 p-8 max-w-lg">
-          <h2 className="font-heading text-xl font-semibold">Activer le profil livreur</h2>
-          <Button className="mt-6" onClick={createDriverProfile}>Créer mon profil</Button>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between rounded-xl border border-white/10 p-4">
-            <div>
-              <p className="text-xs text-white/40">Gains du jour</p>
-              <p className="font-heading text-2xl font-bold text-primary">{earned.toLocaleString("fr-FR")} FC</p>
+    <DashboardLayout title="Mission" flush>
+      <div className="relative h-[calc(100dvh-3.5rem-5.5rem)] md:h-[calc(100dvh-4rem)] bg-[#0b0c0e]">
+        <MapView
+          markers={markers}
+          route={route}
+          readonly
+          pitch={VITA_MAP_4D.pitch}
+          bearing={VITA_MAP_4D.bearing}
+          zoom={VITA_MAP_4D.zoom}
+          className="absolute inset-0 rounded-none min-h-0"
+        />
+
+        <div className="pointer-events-none absolute inset-0 z-10 p-3 sm:p-5 lg:p-8 flex flex-col justify-between gap-3">
+          <div className="pointer-events-auto flex items-center justify-between gap-3 self-stretch">
+            <div className="vita-panel-card rounded-xl px-4 py-3">
+              <p className="text-[10px] uppercase tracking-[0.18em] text-white/40">Gains du jour</p>
+              <p className="font-heading text-xl font-bold text-primary tabular-nums">{earned.toLocaleString("fr-FR")} FC</p>
             </div>
-            <Button variant={!driver.available ? "hero" : "outline"} onClick={() => setOnline(!driver.available)}>
-              {driver.available ? "Passer hors ligne" : "Passer en ligne"}
-            </Button>
+            <button
+              type="button"
+              onClick={() => setOnline(!driver.available)}
+              className={`rounded-full h-11 px-4 text-sm font-semibold ${
+                driver.available ? "bg-white/10 text-white border border-white/15" : "bg-primary text-[#101214]"
+              }`}
+            >
+              {driver.available ? "En ligne" : "Passer en ligne"}
+            </button>
           </div>
 
-          {mission ? (
-            <>
-              <OpsMap markers={markers} className="h-[320px] sm:h-[420px]" />
-              <div className="rounded-xl border border-white/10 p-4 space-y-2">
-                <p className="text-xs text-primary uppercase">{statusLabel(mission.status)}</p>
-                <p className="text-sm">{mission.pickup_address}</p>
-                <p className="text-sm text-white/50">→ {mission.delivery_address}</p>
-                <p className="text-sm">Destinataire : {mission.recipient_name || "—"} · {mission.recipient_phone || "—"}</p>
-                {(st === "ASSIGNED" || st === "ACCEPTED") && <Button className="w-full" onClick={() => advance("COLLECTING")}>Démarrer la collecte</Button>}
-                {st === "COLLECTING" && <Button className="w-full" onClick={() => advance("PICKED_UP")}>Colis collecté</Button>}
-                {st === "PICKED_UP" && <Button className="w-full" onClick={() => advance("IN_TRANSIT")}>En route</Button>}
+          <MissionSheet
+            wide
+            number={mission?.order_number}
+            status={mission ? statusLabel(mission.status) : "Aucune mission — attente dispatch"}
+            eta={etaMin ? `${etaMin} min` : undefined}
+            points={points}
+            href="/livreur/livraisons"
+            ctaLabel="Voir mes colis"
+          >
+            {mission ? (
+              <>
+                {(st === "ASSIGNED" || st === "ACCEPTED") && (
+                  <button type="button" onClick={() => advance("COLLECTING")}>
+                    Démarrer la collecte
+                  </button>
+                )}
+                {st === "COLLECTING" && (
+                  <button type="button" onClick={() => advance("PICKED_UP")}>
+                    Colis collecté
+                  </button>
+                )}
+                {st === "PICKED_UP" && (
+                  <button type="button" onClick={() => advance("IN_TRANSIT")}>
+                    En route vers le destinataire
+                  </button>
+                )}
                 {st === "IN_TRANSIT" && (
                   <div className="flex gap-2">
-                    <Input value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="Code du destinataire" className="bg-white/5 border-white/10" inputMode="numeric" />
-                    <Button onClick={confirmOtp}>Valider</Button>
+                    <Input
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value)}
+                      placeholder="Code destinataire"
+                      className="bg-white/5 border-white/10 h-[42px]"
+                      inputMode="numeric"
+                    />
+                    <Button className="h-[42px] shrink-0" onClick={confirmOtp}>
+                      Valider
+                    </Button>
                   </div>
                 )}
-              </div>
-            </>
-          ) : (
-            <p className="text-white/45 text-sm">Pas de mission en cours. Le dispatch doit vous attribuer une course.</p>
-          )}
+              </>
+            ) : (
+              <p className="text-xs text-white/45">Le dispatch doit vous attribuer une course pour afficher le flux 4D.</p>
+            )}
+          </MissionSheet>
         </div>
-      )}
+      </div>
     </DashboardLayout>
   );
 };

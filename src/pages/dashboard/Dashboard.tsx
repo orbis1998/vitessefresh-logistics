@@ -6,7 +6,7 @@ import MapView from "@/components/MapView";
 import MissionSheet from "@/components/ops/MissionSheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { drivingRoute, isLngLat } from "@/lib/vita-map";
+import { drivingRoute, isLngLat, VITA_MAP_4D } from "@/lib/vita-map";
 import { statusLabel, toVitaStatus } from "@/lib/status";
 
 const LIVE = ["SUBMITTED", "EVALUATING", "PENDING_VALIDATION", "PENDING", "ACCEPTED", "ASSIGNED", "COLLECTING", "PICKED_UP", "IN_TRANSIT"];
@@ -123,12 +123,14 @@ const Dashboard = () => {
 
   return (
     <DashboardLayout title="Mes courses" flush>
-      <div className="relative h-[calc(100dvh-3.5rem-6rem)] lg:h-[calc(100dvh-4rem)] bg-[#0b0c0e]">
+      <div className="relative h-[calc(100dvh-3.5rem-5.5rem)] md:h-[calc(100dvh-4rem)] bg-[#0b0c0e]">
         <MapView
           markers={markers}
           route={route}
           readonly
-          pitch={54}
+          pitch={VITA_MAP_4D.pitch}
+          bearing={VITA_MAP_4D.bearing}
+          zoom={VITA_MAP_4D.zoom}
           className="absolute inset-0 rounded-none min-h-0"
         />
         <div className="pointer-events-none absolute inset-0 z-10 p-3 sm:p-5 lg:p-8 flex flex-col justify-end lg:justify-start lg:items-start">

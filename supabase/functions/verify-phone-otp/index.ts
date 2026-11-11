@@ -28,6 +28,12 @@ Deno.serve(async (req) => {
   const phone = digits(body.phone);
   const code = String(body.code || "").replace(/\D/g, "");
   const fullName = String(body.full_name || "").trim();
+  const password = String(body.password || "");
+  const mode = String(body.mode || "");
+  if (mode !== "register") {
+    return json({ error: "Action OTP invalide" }, 400);
+  }
+  if (password.length < 8) return json({ error: "Mot de passe trop court" }, 400);
   if (!/^243\d{9}$/.test(phone) || code.length < 4) return json({ error: "Données invalides" }, 400);
 
   const { data: rows } = await admin
@@ -50,13 +56,25 @@ Deno.serve(async (req) => {
   await admin.from("phone_auth_challenges").update({ consumed_at: new Date().toISOString() }).eq("id", row.id);
 
   const email = `${phone}@phone.vitaexpress.cd`;
-  const { data: existing } = await admin.from("users").select("id, email").eq("phone", phone).maybeSingle();
+  const { data: existing } = await admin.from("users").select("id, email, name").eq("phone", phone).maybeSingle();
   let userEmail = existing?.email || email;
 
-  if (!existing) {
+  if (existing) {
+    const updated = await admin.auth.admin.updateUserById(existing.id, {
+      password,
+      phone: `+${phone}`,
+      phone_confirm: true,
+      user_metadata: { full_name: fullName || existing.name || phone, phone },
+    });
+    if (updated.error) return json({ error: updated.error.message }, 400);
+    await admin.from("users").update(
+      fullName ? { name: fullName, verified: true } : { verified: true },
+    ).eq("id", existing.id);
+  } else {
     const created = await admin.auth.admin.createUser({
       email,
       email_confirm: true,
+      password,
       phone: `+${phone}`,
       phone_confirm: true,
       user_metadata: { full_name: fullName || phone, phone },

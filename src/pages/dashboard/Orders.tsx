@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card } from "@/components/ui/card";
 import MapView from "@/components/MapView";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -44,7 +43,7 @@ const Steps = ({ current }: { current: number }) => (
     {[1, 2, 3].map((n) => (
       <div key={n} className="flex items-center gap-3">
         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
-          current === n ? "bg-primary text-black" : current > n ? "bg-primary/20 text-primary border border-primary/30" : "bg-secondary text-muted-foreground border border-border"
+          current === n ? "bg-primary text-black" : current > n ? "bg-primary/20 text-primary border border-primary/30" : "bg-white/5 text-white/45 border border-white/10"
         }`}>
           {current > n ? <CheckCircle2 className="w-4 h-4" /> : n}
         </div>
@@ -290,11 +289,13 @@ const Orders = () => {
 
       <div className="grid lg:grid-cols-5 gap-6">
         {/* Carte */}
-        <Card className="lg:col-span-3 p-0 overflow-hidden h-[420px] lg:h-[600px] relative rounded-2xl border-border bg-card">
+        <div className="lg:col-span-3 p-0 overflow-hidden h-[420px] lg:h-[640px] relative rounded-xl border border-white/10 bg-[#0b0c0e]">
           <MapView
             onLocationSelect={step !== "details" ? handleMapSelect : undefined}
             markers={markers}
             readonly={step === "details"}
+            pitch={62}
+            bearing={26}
             className="absolute inset-0"
           />
           {step !== "details" && (
@@ -305,18 +306,18 @@ const Orders = () => {
               </div>
             </div>
           )}
-        </Card>
+        </div>
 
         {/* Panneau latéral */}
         <div className="lg:col-span-2 space-y-4">
           {/* Retrait */}
-          <Card className={`p-4 border-l-4 transition-all rounded-xl ${step === "pickup" ? "border-l-primary ring-1 ring-primary/30 bg-card" : "border-l-primary/40 bg-card"} ${step !== "pickup" && !pickup ? "opacity-50" : ""}`}>
+          <div className={`p-4 border-l-4 transition-all rounded-xl vita-panel-card ${step === "pickup" ? "border-l-primary ring-1 ring-primary/30" : "border-l-primary/40"} ${step !== "pickup" && !pickup ? "opacity-50" : ""}`}>
             <div className="flex items-center gap-3 mb-3">
-              <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${step === "pickup" ? "bg-primary text-black" : "bg-secondary text-primary"}`}>
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${step === "pickup" ? "bg-primary text-black" : "bg-white/10 text-primary"}`}>
                 <MapPin className="w-4 h-4" />
               </div>
               <div className="flex-1">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Point de retrait</p>
+                <p className="text-xs text-white/40 uppercase tracking-wider font-medium">Point de retrait</p>
                 <p className="text-sm font-medium truncate">{pickup?.address || "À définir"}</p>
               </div>
               {pickup && <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />}
@@ -325,21 +326,21 @@ const Orders = () => {
             {step === "pickup" && (
               <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/35" />
                   <Input
                     placeholder="Saisir une adresse..."
-                    className="pl-9 bg-secondary border-border text-foreground placeholder:text-muted-foreground"
+                    className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-white/35"
                     value={pickupQuery}
                     onChange={(e) => { setPickupQuery(e.target.value); setPickup(null); }}
                   />
-                  {searchingPickup && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />}
+                  {searchingPickup && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-white/35" />}
                 </div>
                 {pickupSuggestions.length > 0 && (
-                  <div className="bg-secondary rounded-lg border border-border overflow-hidden">
+                  <div className="bg-white/5 rounded-lg border border-white/10 overflow-hidden">
                     {pickupSuggestions.map((s, i) => (
                       <button
                         key={i}
-                        className="w-full text-left px-3 py-2.5 text-sm hover:bg-muted transition-colors flex items-start gap-2 border-b border-border last:border-0"
+                        className="w-full text-left px-3 py-2.5 text-sm hover:bg-white/10 transition-colors flex items-start gap-2 border-b border-white/10 last:border-0"
                         onClick={() => {
                           setPickup({ address: s.place_name, lat: s.center[1], lng: s.center[0] });
                           setPickupQuery(s.place_name);
@@ -353,22 +354,22 @@ const Orders = () => {
                     ))}
                   </div>
                 )}
-                <Button variant="outline" size="sm" className="w-full border-border text-foreground hover:bg-secondary hover:text-primary" onClick={getCurrentPosition}>
+                <Button variant="outline" size="sm" className="w-full border-white/15 text-white hover:bg-white/10 hover:text-primary" onClick={getCurrentPosition}>
                   <Crosshair className="w-4 h-4 mr-2 text-primary" />
                   Utiliser ma position actuelle
                 </Button>
               </div>
             )}
-          </Card>
+          </div>
 
           {/* Livraison */}
-          <Card className={`p-4 border-l-4 transition-all rounded-xl ${step === "dropoff" ? "border-l-primary ring-1 ring-primary/30 bg-card" : "border-l-primary/40 bg-card"} ${!pickup ? "opacity-50 pointer-events-none" : ""}`}>
+          <div className={`p-4 border-l-4 transition-all rounded-xl vita-panel-card ${step === "dropoff" ? "border-l-primary ring-1 ring-primary/30" : "border-l-primary/40"} ${!pickup ? "opacity-50 pointer-events-none" : ""}`}>
             <div className="flex items-center gap-3 mb-3">
-              <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${step === "dropoff" ? "bg-primary text-black" : "bg-secondary text-primary"}`}>
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${step === "dropoff" ? "bg-primary text-black" : "bg-white/10 text-primary"}`}>
                 <Package className="w-4 h-4" />
               </div>
               <div className="flex-1">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Point de livraison</p>
+                <p className="text-xs text-white/40 uppercase tracking-wider font-medium">Point de livraison</p>
                 <p className="text-sm font-medium truncate">{dropoff?.address || "À définir"}</p>
               </div>
               {dropoff && <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />}
@@ -377,21 +378,21 @@ const Orders = () => {
             {step === "dropoff" && (
               <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/35" />
                   <Input
                     placeholder="Saisir une adresse..."
-                    className="pl-9 bg-secondary border-border text-foreground placeholder:text-muted-foreground"
+                    className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-white/35"
                     value={dropoffQuery}
                     onChange={(e) => { setDropoffQuery(e.target.value); setDropoff(null); }}
                   />
-                  {searchingDropoff && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />}
+                  {searchingDropoff && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-white/35" />}
                 </div>
                 {dropoffSuggestions.length > 0 && (
-                  <div className="bg-secondary rounded-lg border border-border overflow-hidden">
+                  <div className="bg-white/5 rounded-lg border border-white/10 overflow-hidden">
                     {dropoffSuggestions.map((s, i) => (
                       <button
                         key={i}
-                        className="w-full text-left px-3 py-2.5 text-sm hover:bg-muted transition-colors flex items-start gap-2 border-b border-border last:border-0"
+                        className="w-full text-left px-3 py-2.5 text-sm hover:bg-white/10 transition-colors flex items-start gap-2 border-b border-white/10 last:border-0"
                         onClick={() => {
                           setDropoff({ address: s.place_name, lat: s.center[1], lng: s.center[0] });
                           setDropoffQuery(s.place_name);
@@ -405,18 +406,18 @@ const Orders = () => {
                     ))}
                   </div>
                 )}
-                <Button variant="outline" size="sm" className="w-full border-border text-foreground hover:bg-secondary hover:text-primary" onClick={getCurrentPosition}>
+                <Button variant="outline" size="sm" className="w-full border-white/15 text-white hover:bg-white/10 hover:text-primary" onClick={getCurrentPosition}>
                   <Crosshair className="w-4 h-4 mr-2 text-primary" />
                   Utiliser ma position actuelle
                 </Button>
               </div>
             )}
-          </Card>
+          </div>
 
           {/* Détails */}
           {step === "details" && (
             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <Card className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 rounded-xl">
+              <div className="p-4 vita-panel-card rounded-xl border-primary/20">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Calculator className="w-4 h-4 text-primary" />
@@ -431,7 +432,7 @@ const Orders = () => {
                   </div>
                   <span className="text-xl font-bold text-primary">{price.toLocaleString()} FC</span>
                 </div>
-              </Card>
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">

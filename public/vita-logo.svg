@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 260" fill="none">
+  <g transform="translate(8 30) scale(1.25)">
+    <ellipse cx="104" cy="142" rx="46" ry="11" stroke="#F5F5F5" stroke-width="6"/>
+    <path d="M74 18c42 0 70 8 70 37 0 39-31 74-54 91a15 15 0 0 1-18 0C50 129 30 92 30 56 30 28 47 18 74 18Z" fill="#FFC400"/>
+    <path d="M76 43c28 0 42 7 42 25 0 23-19 46-35 58a7 7 0 0 1-9 0c-15-12-29-36-29-58 0-18 10-25 31-25Z" fill="#090909"/>
+    <circle cx="80" cy="70" r="13" fill="#F5F5F5"/>
+    <path d="M9 55h37M22 80h31M4 105h28" stroke="#FFC400" stroke-width="10" stroke-linecap="round"/>
+    <circle cx="44" cy="105" r="6" fill="#FFC400"/>
+  </g>
+  <text x="250" y="170" fill="#F5F5F5" font-family="Arial, Helvetica, sans-serif" font-size="112" font-weight="800" letter-spacing="-5">Vita</text>
+  <text x="475" y="170" fill="#FFC400" font-family="Arial, Helvetica, sans-serif" font-size="112" font-weight="400" letter-spacing="-5">Express</text>
+</svg>

@@ -14,6 +14,7 @@ const files = [
   "supabase/migrations/20261009220000_fix_users_rls_recursion.sql",
   "supabase/migrations/20261009230000_fix_order_required_cols.sql",
   "supabase/migrations/20261010100000_phone_otp_pickup_track.sql",
+  "supabase/migrations/20261010210000_staff_driver_profiles_rls.sql",
 ];
 
 for (const file of files) {

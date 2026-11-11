@@ -86,6 +86,7 @@ CREATE POLICY "Thread messages ins" ON public.support_messages
   );
 
 DROP POLICY IF EXISTS "Driver insert photos storage" ON storage.objects;
+DROP POLICY IF EXISTS "Client upload parcel photos" ON storage.objects;
 CREATE POLICY "Client upload parcel photos" ON storage.objects
   FOR INSERT TO authenticated
   WITH CHECK (bucket_id = 'parcel-photos' AND (storage.foldername(name))[1] = auth.uid()::text);

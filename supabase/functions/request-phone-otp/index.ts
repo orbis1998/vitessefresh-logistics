@@ -25,6 +25,10 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const body = await req.json().catch(() => ({}));
+  const mode = String(body.mode || "");
+  if (mode !== "register") {
+    return json({ error: "Le code OTP est réservé à l’inscription" }, 400);
+  }
   const phone = digits(body.phone);
   if (!/^243\d{9}$/.test(phone)) return json({ error: "Numéro RDC invalide" }, 400);
 
@@ -47,7 +51,7 @@ Deno.serve(async (req) => {
   await admin.rpc("enqueue_notification", {
     p_event_key: `auth-${phone}-${Date.now()}`,
     p_phone: phone,
-    p_body: `Vita Express : votre code de connexion est ${code}. Valable 10 minutes. Ne le partagez pas.`,
+    p_body: `Vita Express : votre code d’inscription est ${code}. Valable 10 minutes. Ne le partagez pas.`,
     p_order_id: null,
     p_channel: "whatsapp",
   });

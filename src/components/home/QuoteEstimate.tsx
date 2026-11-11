@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Loader2, LocateFixed } from "lucide-react";
+import { VitaArrowIcon, VitaLoaderIcon, VitaLocateIcon } from "@/components/brand/VitaIcons";
 import mapboxgl from "mapbox-gl";
 import { Button } from "@/components/ui/button";
 import { useMapboxToken } from "@/hooks/useMapboxToken";
@@ -192,7 +192,7 @@ const QuoteEstimate = () => {
                   onClick={useMyLocation}
                   className="mt-2 inline-flex items-center gap-1.5 text-xs text-primary hover:text-primary/80"
                 >
-                  {geoLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LocateFixed className="h-3.5 w-3.5" />}
+                  {geoLoading ? <VitaLoaderIcon className="h-3.5 w-3.5 animate-spin" /> : <VitaLocateIcon className="h-3.5 w-3.5" />}
                   Utiliser ma position
                 </button>
                 {geoError && <p className="mt-1 text-xs text-red-400">{geoError}</p>}
@@ -261,7 +261,7 @@ const QuoteEstimate = () => {
                     <Button asChild variant="hero" size="xl" className="hidden h-auto sm:inline-flex">
                       <Link to={next}>
                         Commander
-                        <ArrowRight className="w-4 h-4" />
+                        <VitaArrowIcon className="w-4 h-4" />
                       </Link>
                     </Button>
                   ) : (
@@ -274,7 +274,7 @@ const QuoteEstimate = () => {
                   <Button asChild variant="hero" size="xl" className="mt-3 w-full sm:hidden">
                     <Link to={next}>
                       Commander à ce tarif
-                      <ArrowRight className="w-4 h-4" />
+                      <VitaArrowIcon className="w-4 h-4" />
                     </Link>
                   </Button>
                 ) : (
@@ -387,7 +387,7 @@ const Field = ({
         autoComplete="off"
         className="h-12 w-full rounded-xl border border-white/10 bg-white/5 px-3.5 pr-9 text-sm text-white placeholder:text-white/30 outline-none transition-colors duration-300 ease-vita focus:border-primary/60"
       />
-      {loading && <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-white/40" />}
+      {loading && <VitaLoaderIcon className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-white/40" />}
     </div>
     {hits.length > 0 && (
       <ul className="absolute z-30 mt-1.5 w-full overflow-hidden rounded-xl border border-white/10 bg-[#1a1a1a] py-1 shadow-xl">

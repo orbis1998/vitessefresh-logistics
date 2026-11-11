@@ -314,8 +314,9 @@
   border: 2px solid #101214;
 }
 .ops-pin--driver { background: #ffc400; box-shadow: 0 0 0 4px rgba(255, 196, 0, 0.25); }
-.ops-pin--pickup { background: #22c55e; }
+.ops-pin--pickup { background: #3D9B54; }
 .ops-pin--drop { background: #fff; border-radius: 2px; transform: rotate(45deg); }
+.ops-pin--parcel { background: #ffc400; border-radius: 2px; width: 12px; height: 12px; }
 
 .vita-pin {
   position: relative;
@@ -323,30 +324,96 @@
   flex-direction: column;
   align-items: center;
   pointer-events: none;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.55));
 }
 .vita-pin i {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border: 2px solid #0b0c0e;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+  position: relative;
+  z-index: 2;
 }
 .vita-pin em {
-  margin-top: 4px;
+  margin-top: 5px;
   font-style: normal;
   font-size: 10px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: #fff;
   text-shadow: 0 1px 4px #000;
   white-space: nowrap;
+  background: rgba(11, 12, 14, 0.72);
+  padding: 2px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 .vita-pin--pickup i { background: #3D9B54; border-radius: 999px; }
 .vita-pin--driver i { background: #ffc400; border-radius: 999px; box-shadow: 0 0 0 5px rgba(255, 196, 0, 0.22); }
-.vita-pin--parcel i { background: #ffc400; border-radius: 2px; }
+.vita-pin--parcel i { background: #ffc400; border-radius: 3px; width: 15px; height: 15px; }
 .vita-pin--drop i { background: #fff; border-radius: 2px; transform: rotate(45deg); }
+.vita-pin__pulse {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  width: 30px;
+  height: 30px;
+  margin-left: -15px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 196, 0, 0.55);
+  animation: vita-pin-pulse 1.8s ease-out infinite;
+  z-index: 1;
+}
+.vita-pin__heading {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  width: 0;
+  height: 0;
+  margin-left: -5px;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 10px solid #ffc400;
+  transform-origin: 50% 22px;
+  z-index: 3;
+}
+@keyframes vita-pin-pulse {
+  0% { transform: scale(0.55); opacity: 0.85; }
+  70% { transform: scale(1.45); opacity: 0; }
+  100% { transform: scale(1.45); opacity: 0; }
+}
 
 .vita-sheet {
   width: min(360px, calc(100vw - 1.5rem));
+}
+.vita-sheet--wide {
+  width: min(420px, calc(100vw - 1.5rem));
+}
+.vita-sheet__actions {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.vita-sheet__actions .vita-sheet__btn,
+.vita-sheet__actions button {
+  height: 42px;
+  border: 0;
+  background: #ffc400;
+  color: #101214;
+  font-family: Sora, ui-sans-serif, system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.vita-sheet__actions .vita-sheet__btn--ghost,
+.vita-sheet__actions button.vita-sheet__btn--ghost {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.vita-panel-card {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(16, 18, 20, 0.92);
+  backdrop-filter: blur(10px);
 }
 .vita-sheet__bezel {
   padding: 6px;
@@ -526,5 +593,24 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+@media (display-mode: standalone) {
+  .auth-shell > nav {
+    display: none;
+  }
+
+  .auth-main {
+    align-items: flex-start;
+    padding-top: max(2rem, env(safe-area-inset-top));
+    padding-bottom: max(2rem, env(safe-area-inset-bottom));
+  }
+
+  .auth-card {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    padding-inline: 0.25rem;
   }
 }

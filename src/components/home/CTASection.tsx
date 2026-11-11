@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { VitaArrowIcon } from "@/components/brand/VitaIcons";
 import { Button } from "@/components/ui/button";
 
 const CTASection = () => {
@@ -19,7 +19,7 @@ const CTASection = () => {
           <Link to="/auth/register" className="w-full sm:w-auto">
             <Button variant="secondary" size="xl" className="w-full">
               Créer un compte gratuit
-              <ArrowRight className="w-4 h-4" />
+              <VitaArrowIcon className="w-4 h-4" />
             </Button>
           </Link>
           <Link to="/contact" className="w-full sm:w-auto">

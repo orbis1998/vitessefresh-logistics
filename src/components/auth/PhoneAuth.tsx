@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchMyRoles, getPostAuthPath } from "@/lib/auth";
 import { useAuth } from "@/hooks/useAuth";
 import { normalizeDrcPhone } from "@/lib/flexpay";
+import { VitaEyeIcon, VitaEyeOffIcon } from "@/components/brand/VitaIcons";
 
 type Props = {
   mode: "login" | "register";
@@ -17,6 +18,9 @@ type Props = {
 const PhoneAuth = ({ mode, fullName = "" }: Props) => {
   const [local, setLocal] = useState("");
   const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -25,14 +29,31 @@ const PhoneAuth = ({ mode, fullName = "" }: Props) => {
 
   const phone = normalizeDrcPhone(`243${local.replace(/\D/g, "").slice(0, 9)}`);
 
-  const request = async () => {
-    if (local.replace(/\D/g, "").length < 9) {
-      toast({ title: "Numéro incomplet", description: "9 chiffres, sans le 0.", variant: "destructive" });
-      return;
+  const validateCredentials = () => {
+    if (mode === "register" && !fullName.trim()) {
+      toast({ title: "Nom complet requis", variant: "destructive" });
+      return false;
     }
+    if (local.replace(/\D/g, "").length !== 9) {
+      toast({ title: "Numéro incomplet", description: "Saisissez 9 chiffres, sans le 0.", variant: "destructive" });
+      return false;
+    }
+    if (password.length < 8) {
+      toast({ title: "Mot de passe trop court", description: "Utilisez au moins 8 caractères.", variant: "destructive" });
+      return false;
+    }
+    if (mode === "register" && password !== confirmPassword) {
+      toast({ title: "Les mots de passe ne correspondent pas", variant: "destructive" });
+      return false;
+    }
+    return true;
+  };
+
+  const request = async () => {
+    if (!validateCredentials()) return;
     setLoading(true);
     const { data, error } = await supabase.functions.invoke("request-phone-otp", {
-      body: { phone, full_name: fullName, mode },
+      body: { phone, mode: "register" },
     });
     setLoading(false);
     if (error || data?.error) {
@@ -42,8 +63,30 @@ const PhoneAuth = ({ mode, fullName = "" }: Props) => {
     setSent(true);
     toast({
       title: "Code envoyé",
-      description: "Regardez WhatsApp (ou SMS). Valable 10 minutes.",
+      description: "Confirmez une seule fois votre numéro sur WhatsApp ou par SMS.",
     });
+  };
+
+  const login = async () => {
+    if (!validateCredentials()) return;
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: `${phone}@phone.vitaexpress.cd`,
+      password,
+    });
+    if (error) {
+      setLoading(false);
+      toast({
+        title: "Connexion impossible",
+        description: "Numéro ou mot de passe incorrect.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const roles = await fetchMyRoles();
+    await refreshRoles();
+    setLoading(false);
+    navigate(getPostAuthPath(roles), { replace: true });
   };
 
   const verify = async () => {
@@ -53,7 +96,7 @@ const PhoneAuth = ({ mode, fullName = "" }: Props) => {
     }
     setLoading(true);
     const { data, error } = await supabase.functions.invoke("verify-phone-otp", {
-      body: { phone, code: code.trim(), full_name: fullName },
+      body: { phone, code: code.trim(), full_name: fullName, password, mode: "register" },
     });
     if (error || data?.error || !data?.token_hash) {
       setLoading(false);
@@ -95,6 +138,52 @@ const PhoneAuth = ({ mode, fullName = "" }: Props) => {
           />
         </div>
       </div>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-3">
+          <Label htmlFor={`phone-password-${mode}`}>
+            Mot de passe
+          </Label>
+          {mode === "login" && (
+            <Link to="/auth/forgot-password" className="text-xs font-medium text-primary hover:underline">
+              Oublié ?
+            </Link>
+          )}
+        </div>
+        <div className="relative">
+          <Input
+            id={`phone-password-${mode}`}
+            type={showPassword ? "text" : "password"}
+            autoComplete={mode === "login" ? "current-password" : "new-password"}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            className="h-12 pr-11"
+            minLength={8}
+            disabled={sent}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((value) => !value)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+          >
+            {showPassword ? <VitaEyeOffIcon className="h-4 w-4" /> : <VitaEyeIcon className="h-4 w-4" />}
+          </button>
+        </div>
+      </div>
+      {mode === "register" && !sent && (
+        <div className="space-y-2">
+          <Label htmlFor="phone-password-confirm">Confirmer le mot de passe</Label>
+          <Input
+            id="phone-password-confirm"
+            type={showPassword ? "text" : "password"}
+            autoComplete="new-password"
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+            className="h-12"
+            minLength={8}
+          />
+        </div>
+      )}
       {sent && (
         <div className="space-y-2">
           <Label htmlFor="otp-auth">Code reçu</Label>
@@ -109,8 +198,14 @@ const PhoneAuth = ({ mode, fullName = "" }: Props) => {
           />
         </div>
       )}
-      <Button size="lg" className="w-full" disabled={loading} onClick={sent ? verify : request}>
-        {loading ? "…" : sent ? "Valider le code" : "Recevoir le code"}
+      <Button size="lg" className="w-full" disabled={loading} onClick={mode === "login" ? login : sent ? verify : request}>
+        {loading
+          ? "…"
+          : mode === "login"
+            ? "Se connecter"
+            : sent
+              ? "Créer mon compte"
+              : "Recevoir le code"}
       </Button>
       {sent && (
         <button type="button" className="w-full text-xs text-muted-foreground" onClick={() => setSent(false)}>

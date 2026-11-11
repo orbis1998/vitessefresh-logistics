@@ -1,17 +1,26 @@
 import type { ReactNode } from "react";
+import MapView from "@/components/MapView";
 import {
-  ArrowRight,
-  Banknote,
-  Calculator,
-  CheckCircle2,
-  MapPin,
-  Package,
-  Phone,
-  ShieldCheck,
-  User,
-} from "lucide-react";
+  VitaArrowIcon,
+  VitaCalculatorIcon,
+  VitaCashIcon,
+  VitaCheckIcon,
+  VitaParcelIcon,
+  VitaPhoneIcon,
+  VitaPinIcon,
+  VitaShieldIcon,
+  VitaUserIcon,
+} from "@/components/brand/VitaIcons";
 import { useInView } from "@/hooks/useInView";
 import { VitaWordmark } from "@/components/brand/VitaWordmark";
+
+const DEMO_ROUTE: Array<[number, number]> = [
+  [15.2867, -4.3078],
+  [15.2942, -4.3161],
+  [15.3025, -4.3244],
+  [15.3136, -4.331],
+  [15.3263, -4.3372],
+];
 
 const HowItWorksSection = () => {
   const { ref, visible } = useInView<HTMLElement>(0.12);
@@ -118,15 +127,15 @@ const Screen1 = () => (
       </PhoneMap>
       <div className="space-y-1.5 bg-[#101214] px-2.5 py-2.5">
         <div className="flex items-center gap-2 rounded-lg border-l-[3px] border-l-primary bg-white/5 px-2 py-1.5">
-          <MapPin className="h-3 w-3 text-primary shrink-0" />
+          <VitaPinIcon className="h-3 w-3 text-primary shrink-0" />
           <div className="min-w-0">
             <p className="text-[8px] uppercase tracking-wider text-white/40">Point de retrait</p>
             <p className="truncate text-[10px] text-white">Bd du 30 Juin, Gombe</p>
           </div>
-          <CheckCircle2 className="ml-auto h-3.5 w-3.5 text-primary shrink-0" />
+          <VitaCheckIcon className="ml-auto h-3.5 w-3.5 text-primary shrink-0" />
         </div>
         <div className="flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-2 py-1.5 ring-1 ring-primary/20">
-          <Package className="h-3 w-3 text-primary shrink-0" />
+          <VitaParcelIcon className="h-3 w-3 text-primary shrink-0" />
           <div className="min-w-0">
             <p className="text-[8px] uppercase tracking-wider text-primary">Point de livraison</p>
             <p className="truncate text-[10px] text-white">7e rue, Limete</p>
@@ -151,7 +160,7 @@ const Screen2 = () => (
                 n < 3 ? "bg-primary/20 text-primary" : "bg-primary text-black"
               }`}
             >
-              {n < 3 ? <CheckCircle2 className="h-3 w-3" /> : n}
+              {n < 3 ? <VitaCheckIcon className="h-3 w-3" /> : n}
             </div>
             {n < 3 && <div className="h-px w-4 bg-primary" />}
           </div>
@@ -161,14 +170,14 @@ const Screen2 = () => (
       <div className="rounded-lg border border-primary/20 bg-gradient-to-br from-primary/10 to-primary/5 p-2.5">
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-1 text-[10px] font-medium">
-            <Calculator className="h-3 w-3 text-primary" />
+            <VitaCalculatorIcon className="h-3 w-3 text-primary" />
             Distance
           </span>
           <span className="text-[10px] font-bold">6,2 km</span>
         </div>
         <div className="mt-1.5 flex items-center justify-between border-t border-primary/10 pt-1.5">
           <span className="flex items-center gap-1 text-[10px] font-medium">
-            <Package className="h-3 w-3 text-primary" />
+            <VitaParcelIcon className="h-3 w-3 text-primary" />
             Prix estimé
           </span>
           <span className="font-heading text-sm font-bold text-primary">4 200 FC</span>
@@ -179,14 +188,14 @@ const Screen2 = () => (
         <div>
           <p className="text-[7px] uppercase tracking-wider text-muted-foreground">Destinataire</p>
           <div className="mt-0.5 flex items-center gap-1 rounded-md border border-border bg-secondary px-1.5 py-1 text-[10px]">
-            <User className="h-2.5 w-2.5 text-muted-foreground" />
+            <VitaUserIcon className="h-2.5 w-2.5 text-muted-foreground" />
             Sarah Tshala
           </div>
         </div>
         <div>
           <p className="text-[7px] uppercase tracking-wider text-muted-foreground">Téléphone</p>
           <div className="mt-0.5 flex items-center gap-1 rounded-md border border-border bg-secondary px-1.5 py-1 text-[10px]">
-            <Phone className="h-2.5 w-2.5 text-muted-foreground" />
+            <VitaPhoneIcon className="h-2.5 w-2.5 text-muted-foreground" />
             +243 81 4…
           </div>
         </div>
@@ -199,8 +208,8 @@ const Screen2 = () => (
       <div className="mt-1 grid grid-cols-2 gap-1.5">
         <div className="rounded-lg border border-primary bg-primary/10 p-1.5 ring-1 ring-primary/30">
           <div className="flex items-center justify-between">
-            <Banknote className="h-3 w-3 text-primary" />
-            <CheckCircle2 className="h-3 w-3 text-primary" />
+            <VitaCashIcon className="h-3 w-3 text-primary" />
+            <VitaCheckIcon className="h-3 w-3 text-primary" />
           </div>
           <p className="mt-1 text-[9px] font-semibold">Cash à la livraison</p>
         </div>
@@ -211,14 +220,14 @@ const Screen2 = () => (
       </div>
 
       <div className="mt-2 flex items-start gap-1.5 rounded-lg border border-primary/20 bg-primary/5 p-1.5">
-        <ShieldCheck className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
+        <VitaShieldIcon className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
         <p className="text-[8px] leading-snug text-muted-foreground">
           <span className="font-medium text-foreground">Sécurité :</span> un code PIN à 4 chiffres sera demandé au livreur.
         </p>
       </div>
 
       <div className="mt-2 flex items-center justify-center gap-1 rounded-lg bg-primary py-2 text-[10px] font-bold tracking-wide text-primary-foreground">
-        <ArrowRight className="h-3 w-3" />
+        <VitaArrowIcon className="h-3 w-3" />
         CONFIRMER LA COMMANDE
       </div>
     </div>
@@ -229,14 +238,27 @@ const Screen3 = () => (
   <PhoneShell>
     <div className="howit-app p-0">
       <div className="flex items-center justify-between px-3 pt-1">
-        <VitaWordmark className="text-[11px] text-white" />
+        <VitaWordmark lockup className="h-4" />
         <span className="flex items-center gap-1 text-[9px] text-primary">
           <span className="h-1.5 w-1.5 rounded-full bg-primary howit-pulse" />
           En route
         </span>
       </div>
       <PhoneMap className="mx-2.5 mt-2 min-h-0 flex-1 rounded-xl">
-        <span className="absolute left-[46%] top-[42%] howit-courier z-10" />
+        <MapView
+          center={[15.3078, -4.3276]}
+          zoom={12.8}
+          pitch={38}
+          markers={[
+            { coordinates: DEMO_ROUTE[0], type: "pickup" },
+            { coordinates: DEMO_ROUTE[DEMO_ROUTE.length - 1], type: "delivery" },
+          ]}
+          route={DEMO_ROUTE}
+          showDriverLocation
+          driverLocation={DEMO_ROUTE[2]}
+          readonly
+          className="!min-h-0 [&_.mapboxgl-ctrl-top-right]:hidden"
+        />
       </PhoneMap>
       <div className="m-2.5 flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2.5">
         <div>

@@ -48,7 +48,7 @@ export type OrderFormData = z.infer<typeof orderSchema>;
 export type ContactFormData = z.infer<typeof contactSchema>;
 
 // Fonctions de validation
-export const validateForm = <T>(schema: z.ZodSchema<T>, data: unknown): { success: boolean; data?: T; errors?: Record<string, string> } => {
+export const validateForm = <T,>(schema: z.ZodSchema<T>, data: unknown): { success: boolean; data?: T; errors?: Record<string, string> } => {
   try {
     const validatedData = schema.parse(data);
     return { success: true, data: validatedData };

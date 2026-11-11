@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import ForgotPassword from "./pages/auth/ForgotPassword";
+import UpdatePassword from "./pages/auth/UpdatePassword";
 import Callback from "./pages/auth/Callback";
 import Dashboard from "./pages/dashboard/Dashboard";
 import Orders from "./pages/dashboard/Orders";
@@ -37,6 +38,7 @@ import EntrepriseTeam from "./pages/entreprise/EntrepriseTeam";
 import EntreprisePlan from "./pages/entreprise/EntreprisePlan";
 import ClientSupport from "./pages/dashboard/Support";
 import Services from "./pages/Services";
+import ServiceDetail from "./pages/ServiceDetail";
 import Forfaits from "./pages/Forfaits";
 import TrackingPage from "./pages/Tracking";
 import Contact from "./pages/Contact";
@@ -60,6 +62,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/services" element={<Services />} />
+            <Route path="/services/:slug" element={<ServiceDetail />} />
             <Route path="/forfaits" element={<Forfaits />} />
             <Route path="/tracking" element={<TrackingPage />} />
             <Route path="/contact" element={<Contact />} />
@@ -71,6 +74,7 @@ const App = () => (
             <Route path="/auth/register" element={<Register />} />
             <Route path="/auth/callback" element={<Callback />} />
             <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+            <Route path="/auth/update-password" element={<UpdatePassword />} />
 
             {/* Client */}
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

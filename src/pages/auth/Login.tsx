@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff } from "lucide-react";
+import { VitaEyeIcon as Eye, VitaEyeOffIcon as EyeOff } from "@/components/brand/VitaIcons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,7 +20,13 @@ const Login = () => {
   const [emailMode, setEmailMode] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { refreshRoles } = useAuth();
+  const { refreshRoles, user, loading: authLoading, roles } = useAuth();
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate(getPostAuthPath(roles), { replace: true });
+    }
+  }, [authLoading, navigate, roles, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +58,7 @@ const Login = () => {
   return (
     <AuthLayout title="Connexion">
       <p className="text-sm text-muted-foreground -mt-4 mb-6">
-        Un numéro WhatsApp suffit. Pas besoin de Gmail.
+        Connectez-vous avec votre numéro et votre mot de passe.
       </p>
       <PhoneAuth mode="login" />
 

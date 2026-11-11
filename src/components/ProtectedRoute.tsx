@@ -1,7 +1,7 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth, AppRole } from "@/hooks/useAuth";
 import { HOME_BY_ROLE, isStaff } from "@/lib/roles";
-import { Loader2 } from "lucide-react";
+import { VitaLoaderIcon as Loader2 } from "@/components/brand/VitaIcons";
 
 interface Props {
   children: React.ReactNode;

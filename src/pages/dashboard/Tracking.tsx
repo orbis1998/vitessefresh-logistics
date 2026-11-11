@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   Loader2, Package, Phone, Navigation, RefreshCw, AlertCircle, CheckCircle2,
-  ArrowRight, Clock, Share2, ShieldCheck, Banknote, Smartphone
+  ArrowRight, Share2, ShieldCheck, Banknote, Smartphone
 } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -164,11 +164,29 @@ const Tracking = () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   };
 
+  const stLive = order ? String(order.status).toUpperCase() : "";
   const markers = order
     ? [
         { coordinates: [Number(order.pickup_lng), Number(order.pickup_lat)] as [number, number], type: "pickup" as const, popup: "Ramassage" },
         { coordinates: [Number(order.delivery_lng), Number(order.delivery_lat)] as [number, number], type: "delivery" as const, popup: "Livraison" },
         ...(driverLoc ? [{ coordinates: [driverLoc.lng, driverLoc.lat] as [number, number], type: "driver" as const, popup: "Livreur" }] : []),
+        ...(stLive === "PICKED_UP" || stLive === "IN_TRANSIT"
+          ? [
+              {
+                coordinates: (driverLoc
+                  ? [driverLoc.lng, driverLoc.lat]
+                  : [Number(order.pickup_lng), Number(order.pickup_lat)]) as [number, number],
+                type: "parcel" as const,
+                popup: "Colis",
+              },
+            ]
+          : [
+              {
+                coordinates: [Number(order.pickup_lng), Number(order.pickup_lat)] as [number, number],
+                type: "parcel" as const,
+                popup: "Colis",
+              },
+            ]),
       ]
     : [];
 
@@ -189,7 +207,8 @@ const Tracking = () => {
             markers={markers}
             route={route ?? []}
             readonly
-            pitch={54}
+            pitch={62}
+            bearing={26}
             className="absolute inset-0 rounded-none min-h-0"
             center={markers[0]?.coordinates}
           />
@@ -222,94 +241,108 @@ const Tracking = () => {
   }
 
   return (
-    <DashboardLayout title="Suivi en direct" subtitle="Position du livreur en temps réel">
-      <div className="space-y-6">
+    <DashboardLayout title="Suivi en direct" subtitle="Flux 4D livreur · colis · destinataire" flush>
+      <div className="relative min-h-[calc(100dvh-3.5rem-5.5rem)] md:min-h-[calc(100dvh-4rem)] bg-[#0b0c0e] p-3 sm:p-5 lg:p-8">
         {!orderId ? (
-          <>
+          <div className="mx-auto max-w-2xl space-y-4">
             {loading ? (
               <div className="space-y-4 animate-pulse">
-                <div className="h-32 bg-secondary rounded-2xl" />
-                <div className="h-32 bg-secondary rounded-2xl" />
+                <div className="h-32 rounded-xl bg-white/5" />
+                <div className="h-32 rounded-xl bg-white/5" />
               </div>
             ) : activeOrders.length === 0 ? (
-              <div className="bg-card border border-border rounded-2xl p-12 text-center space-y-4 animate-in fade-in">
+              <div className="vita-panel-card rounded-xl p-10 text-center space-y-4">
                 <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
                   <Package className="w-7 h-7 text-primary" />
                 </div>
-                <h2 className="font-poppins font-semibold text-lg">Aucune livraison en cours</h2>
-                <p className="text-muted-foreground text-sm">Lancez une commande pour voir le suivi en direct.</p>
-                <Link to="/dashboard/orders"><Button size="lg" className="font-bold tracking-wide">Nouvelle commande</Button></Link>
+                <h2 className="font-heading font-semibold text-lg">Aucune livraison en cours</h2>
+                <p className="text-white/50 text-sm">Lancez une commande pour voir le suivi 4D en direct.</p>
+                <Link to="/dashboard/order">
+                  <Button size="lg" className="font-semibold">Nouvelle course</Button>
+                </Link>
               </div>
             ) : (
               <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">Sélectionnez une livraison à suivre :</p>
+                <p className="text-sm text-white/45">Sélectionnez une livraison à suivre :</p>
                 {activeOrders.map((o) => (
-                  <Link key={o.id} to={`/dashboard/tracking?id=${o.id}`} className="group block bg-card border border-border rounded-2xl p-5 hover:border-primary/30 transition-all animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <Link
+                    key={o.id}
+                    to={`/dashboard/tracking?id=${o.id}`}
+                    className="group block vita-panel-card rounded-xl p-5 hover:border-primary/35 transition-all"
+                  >
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="flex-1 min-w-0">
                         <p className="font-heading text-sm tabular-nums text-primary">{o.order_number}</p>
-                        <p className="font-medium text-sm truncate">{o.pickup_address} → {o.delivery_address}</p>
-                        <p className={`text-sm mt-1 ${STATUS_META[String(o.status).toUpperCase()]?.color}`}>{STATUS_META[String(o.status).toUpperCase()]?.label}</p>
+                        <p className="font-medium text-sm truncate text-white/90">{o.pickup_address} → {o.delivery_address}</p>
+                        <p className={`text-sm mt-1 ${STATUS_META[String(o.status).toUpperCase()]?.color}`}>
+                          {STATUS_META[String(o.status).toUpperCase()]?.label}
+                        </p>
                       </div>
-                      <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all shrink-0 mt-2" />
+                      <ArrowRight className="w-5 h-5 text-white/35 group-hover:text-primary group-hover:translate-x-1 transition-all shrink-0 mt-2" />
                     </div>
-                    <div className="flex items-center justify-between pt-3 border-t border-border">
-                      <span className="text-sm text-muted-foreground">{o.distance} km</span>
-                      <Badge className="bg-primary/10 text-primary border-primary/20">{Number(o.total_price ?? 0).toLocaleString()} FC</Badge>
+                    <div className="flex items-center justify-between pt-3 border-t border-white/10">
+                      <span className="text-sm text-white/45">{o.distance} km</span>
+                      <Badge className="bg-primary/10 text-primary border-primary/20">
+                        {Number(o.total_price ?? 0).toLocaleString()} FC
+                      </Badge>
                     </div>
                   </Link>
                 ))}
               </div>
             )}
-          </>
+          </div>
         ) : !order ? (
           <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
         ) : (
-          <div className="space-y-4 animate-in fade-in">
-            {/* Status card */}
-            <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
+          <div className="mx-auto max-w-2xl space-y-4 animate-in fade-in">
+            <div className="vita-panel-card rounded-xl p-5 space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
                   <p className="font-heading text-xl tabular-nums text-primary mb-1">{order.order_number}</p>
-                  <Badge className="mb-2 bg-primary/10 text-primary border-primary/20">{STATUS_META[String(order.status).toUpperCase()]?.label}</Badge>
-                  <p className="font-semibold text-sm">{order.pickup_address} → {order.delivery_address}</p>
+                  <Badge className="mb-2 bg-primary/10 text-primary border-primary/20">
+                    {STATUS_META[String(order.status).toUpperCase()]?.label}
+                  </Badge>
+                  <p className="font-semibold text-sm text-white/90">
+                    {order.pickup_address} → {order.delivery_address}
+                  </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-muted-foreground">{order.distance} km</p>
+                  <p className="text-sm text-white/45">{order.distance} km</p>
                   <p className="text-xl font-bold text-primary">{Number(order.total_price ?? 0).toLocaleString()} FC</p>
                 </div>
               </div>
 
-              {/* GPS status indicator */}
-              <div className={`flex items-center gap-3 p-3 rounded-xl ${
-                gpsActive === true ? "bg-green-500/10 border border-green-500/20" :
-                gpsActive === false ? "bg-yellow-500/10 border border-yellow-500/20" :
-                "bg-secondary border border-border"
-              }`}>
+              <div
+                className={`flex items-center gap-3 p-3 rounded-xl ${
+                  gpsActive === true
+                    ? "bg-green-500/10 border border-green-500/20"
+                    : gpsActive === false
+                      ? "bg-yellow-500/10 border border-yellow-500/20"
+                      : "bg-white/5 border border-white/10"
+                }`}
+              >
                 {gpsActive === true ? (
                   <CheckCircle2 className="w-5 h-5 text-green-400" />
                 ) : gpsActive === false ? (
                   <AlertCircle className="w-5 h-5 text-yellow-400" />
                 ) : (
-                  <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" />
+                  <Loader2 className="w-5 h-5 text-white/45 animate-spin" />
                 )}
                 <div className="flex-1">
                   <p className="text-sm font-medium">
-                    {gpsActive === true ? "GPS du livreur actif" :
-                     gpsActive === false ? "Le livreur n'a pas activé son GPS" :
-                     "Vérification GPS..."}
+                    {gpsActive === true
+                      ? "GPS du livreur actif"
+                      : gpsActive === false
+                        ? "Le livreur n'a pas activé son GPS"
+                        : "Vérification GPS..."}
                   </p>
-                  {gpsActive === false && (
-                    <p className="text-xs text-muted-foreground mt-0.5">Le livreur doit activer le partage GPS pour afficher sa position.</p>
-                  )}
                 </div>
                 <Button variant="ghost" size="icon" onClick={refreshDriverLoc} disabled={refreshing}>
                   <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
                 </Button>
               </div>
 
-              {/* Mode de paiement */}
-              <div className="pt-2 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
+              <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs text-white/45">
                 <div className="flex items-center gap-2">
                   {order.payment_method === "kpay" || order.payment_method === "flexpay" ? (
                     <Smartphone className="w-4 h-4 text-primary" />
@@ -322,21 +355,17 @@ const Tracking = () => {
                       : "Paiement en espèces à la livraison"}
                   </span>
                 </div>
-                <Badge variant="outline" className={order.payment_status === "paid" ? "border-green-500 text-green-400" : "border-border text-muted-foreground"}>
-                  {order.payment_status === "paid" ? "Payé ✓" : order.payment_method === "cash" ? "À régler au livreur" : "En attente"}
-                </Badge>
               </div>
             </div>
 
-            {/* ── CARTE CODE OTP DE LIVRAISON SÉCURISÉ ── */}
             {String(order.status).toUpperCase() !== "DELIVERED" && String(order.status).toUpperCase() !== "CANCELLED" && (
-              <div className="bg-card border border-primary/30 rounded-2xl p-5">
+              <div className="vita-panel-card rounded-xl border-primary/30 p-5">
                 <div className="flex items-center gap-2 mb-2">
                   <ShieldCheck className="w-5 h-5 text-primary" />
-                  <span className="font-poppins font-bold text-sm uppercase tracking-wider">Code destinataire</span>
+                  <span className="font-heading font-bold text-sm uppercase tracking-wider">Code destinataire</span>
                 </div>
-                <p className="text-xs text-muted-foreground max-w-md">
-                  Le code de remise est envoyé uniquement au destinataire (WhatsApp). Il n’est pas affiché ici, ni au livreur, ni à l’admin.
+                <p className="text-xs text-white/45 max-w-md">
+                  Le code de remise est envoyé uniquement au destinataire (WhatsApp).
                 </p>
                 <Button size="sm" className="mt-3 bg-green-600 hover:bg-green-500 text-white" onClick={handleShareWhatsApp}>
                   <Share2 className="w-3.5 h-3.5 mr-1.5" /> Informer le destinataire
@@ -344,37 +373,23 @@ const Tracking = () => {
               </div>
             )}
 
-            {String(order.status).toUpperCase() === "DELIVERED" && (
-              <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-4 flex items-center gap-3">
-                <CheckCircle2 className="w-6 h-6 text-green-400 shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-green-400">Course livrée avec succès</p>
-                  <p className="text-xs text-muted-foreground">La remise du colis a été validée avec le code secret OTP.</p>
-                </div>
-              </div>
-            )}
-
-            {/* Map */}
-            <div className="bg-card border border-border rounded-2xl overflow-hidden h-[400px] relative">
-              <MapView markers={markers} route={route} estimatedTime={estimatedTime} className="absolute inset-0" readonly={true} center={markers[0]?.coordinates} />
+            <div className="overflow-hidden h-[400px] relative rounded-xl border border-white/10 bg-[#0b0c0e]">
+              <MapView
+                markers={markers}
+                route={route ?? []}
+                estimatedTime={estimatedTime ? Math.max(1, Math.round(estimatedTime / 60)) : undefined}
+                className="absolute inset-0"
+                readonly
+                pitch={62}
+                bearing={26}
+                center={markers[0]?.coordinates}
+              />
               {!order.driver_id && (
                 <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center">
                   <div className="text-center space-y-2">
                     <Navigation className="w-8 h-8 text-primary mx-auto" />
                     <p className="text-sm font-medium">En attente d'un livreur disponible...</p>
                   </div>
-                </div>
-              )}
-              {estimatedTime && (
-                <div className="absolute top-3 left-3 bg-black/90 backdrop-blur-xl border border-border rounded-xl px-4 py-2 flex items-center gap-2 z-10">
-                  <Clock className="w-4 h-4 text-primary" />
-                  <span className="text-sm font-medium">
-                    {estimatedTime < 60
-                      ? `${Math.round(estimatedTime)} sec`
-                      : estimatedTime < 3600
-                      ? `${Math.round(estimatedTime / 60)} min`
-                      : `${Math.round(estimatedTime / 3600)} h ${Math.round((estimatedTime % 3600) / 60)} min`}
-                  </span>
                 </div>
               )}
             </div>

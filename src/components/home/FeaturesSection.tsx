@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { useInView } from "@/hooks/useInView";
 
 const features = [
@@ -36,21 +35,6 @@ const features = [
 
 const FeaturesSection = () => {
   const { ref, visible } = useInView<HTMLElement>();
-  const [clock, setClock] = useState("");
-
-  useEffect(() => {
-    const tick = () =>
-      setClock(
-        new Date().toLocaleTimeString("fr-FR", {
-          hour: "2-digit",
-          minute: "2-digit",
-          timeZone: "Africa/Kinshasa",
-        })
-      );
-    tick();
-    const id = window.setInterval(tick, 30000);
-    return () => window.clearInterval(id);
-  }, []);
 
   return (
     <section ref={ref} className="py-20 sm:py-28 bg-background">
@@ -70,29 +54,6 @@ const FeaturesSection = () => {
               Pas un logiciel importé : un réseau qui connaît Gombe, Lemba, Limete.
             </p>
 
-            <div className="mt-8 rounded-[1.35rem] border border-white/10 bg-white/[0.03] p-1.5">
-              <div className="rounded-[1.1rem] bg-[#141414] p-5 sm:p-6">
-                <div className="flex items-center justify-between text-xs text-white/45">
-                  <span>Dispatch · Kinshasa</span>
-                  <span className="tabular-nums text-primary">{clock || "--:--"}</span>
-                </div>
-                <div className="mt-4 space-y-3">
-                  {[
-                    ["Gombe → Limete", "En route", "12 min"],
-                    ["Ngaliema → Kintambo", "Ramassage", "4 min"],
-                    ["Lemba → Matete", "Assigné", "18 min"],
-                  ].map(([route, state, eta]) => (
-                    <div key={route} className="flex items-center justify-between gap-3 border-t border-white/10 pt-3 first:border-0 first:pt-0">
-                      <div>
-                        <p className="text-sm text-white">{route}</p>
-                        <p className="text-xs text-white/40 mt-0.5">{state}</p>
-                      </div>
-                      <span className="text-xs text-primary tabular-nums">{eta}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
           </div>
 
           <ul className="lg:col-span-7">

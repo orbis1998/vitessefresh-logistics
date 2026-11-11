@@ -1,7 +1,17 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { motion } from "framer-motion";
-import { Mail, Phone, MapPin, MessageCircle, Clock, Send, Building, Users, Headphones } from "lucide-react";
+import {
+  VitaBuildingIcon as Building,
+  VitaChatIcon as MessageCircle,
+  VitaClockIcon as Clock,
+  VitaMailIcon as Mail,
+  VitaPhoneIcon as Phone,
+  VitaPinIcon as MapPin,
+  VitaSendIcon as Send,
+  VitaSupportIcon as Headphones,
+  VitaTeamIcon as Users,
+} from "@/components/brand/VitaIcons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";

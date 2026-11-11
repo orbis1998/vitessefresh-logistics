@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { VitaLoaderIcon as Loader2 } from "@/components/brand/VitaIcons";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchMyRoles, getPostAuthPath } from "@/lib/auth";
 import { useAuth } from "@/hooks/useAuth";

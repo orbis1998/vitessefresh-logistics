@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { VitaCloseIcon, VitaMenuIcon } from "@/components/brand/VitaIcons";
 import { Button } from "@/components/ui/button";
 import { VitaWordmark } from "@/components/brand/VitaWordmark";
 
@@ -30,7 +30,7 @@ const Navbar = () => {
       <div className="container-custom">
         <div className="flex items-center justify-between h-16 lg:h-[72px]">
           <Link to="/" aria-label="Vita Express">
-            <VitaWordmark className="text-lg text-foreground" />
+            <VitaWordmark lockup className="h-9 sm:h-11" />
           </Link>
 
           <div className="hidden lg:flex items-center gap-1">
@@ -65,7 +65,7 @@ const Navbar = () => {
             className="lg:hidden p-2 rounded-md hover:bg-muted"
             aria-label={isOpen ? "Fermer le menu" : "Ouvrir le menu"}
           >
-            {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {isOpen ? <VitaCloseIcon className="w-5 h-5" /> : <VitaMenuIcon className="w-5 h-5" />}
           </button>
         </div>
       </div>

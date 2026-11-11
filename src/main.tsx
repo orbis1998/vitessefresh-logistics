@@ -4,3 +4,11 @@ import "./index.css";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 createRoot(document.getElementById("root")!).render(<App />);
+
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {
+      // The application remains fully usable without offline support.
+    });
+  });
+}

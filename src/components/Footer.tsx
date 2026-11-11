@@ -10,7 +10,7 @@ const Footer = () => {
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-10">
           <div className="col-span-2 space-y-4">
             <Link to="/" aria-label="Vita Express">
-              <VitaWordmark className="text-lg text-white" />
+              <VitaWordmark lockup className="h-10" />
             </Link>
             <p className="text-white/55 text-sm leading-relaxed max-w-xs">
               Votre partenaire de confiance pour la livraison rapide et fiable à Kinshasa.
@@ -55,7 +55,6 @@ const Footer = () => {
 
         <div className="mt-12 pt-6 border-t border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-white/40">
           <p>© {year} Vita Express. Tous droits réservés.</p>
-          <p>Conçu à Kinshasa, RDC</p>
         </div>
       </div>
     </footer>

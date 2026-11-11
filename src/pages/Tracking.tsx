@@ -1,7 +1,15 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { motion } from "framer-motion";
-import { Search, MapPin, Clock, Package, CheckCircle, Truck, User } from "lucide-react";
+import {
+  VitaCheckIcon as CheckCircle,
+  VitaClockIcon as Clock,
+  VitaExpressIcon as Truck,
+  VitaParcelIcon as Package,
+  VitaPinIcon as MapPin,
+  VitaSearchIcon as Search,
+  VitaUserIcon as User,
+} from "@/components/brand/VitaIcons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";

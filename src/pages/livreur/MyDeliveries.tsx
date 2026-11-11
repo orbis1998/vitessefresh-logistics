@@ -1,51 +1,35 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  Loader2, Navigation, Phone, ChevronLeft, ChevronRight,
-  Package, CheckCircle2, Truck, CircleDot, Circle
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Navigation, Package, Phone } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import MapView from "@/components/MapView";
+import MissionSheet from "@/components/ops/MissionSheet";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-
-const STATUS_META: Record<string, { label: string; icon: any; color: string; step: number }> = {
-  ASSIGNED:   { label: "Attribuée",     icon: CheckCircle2, color: "text-primary", step: 0 },
-  ACCEPTED:   { label: "Acceptée",      icon: CheckCircle2, color: "text-primary", step: 0 },
-  COLLECTING: { label: "Collecte",      icon: Package,      color: "text-primary", step: 1 },
-  PICKED_UP:  { label: "Collectée",     icon: Package,      color: "text-primary", step: 1 },
-  IN_TRANSIT: { label: "En livraison",  icon: Truck,        color: "text-primary", step: 2 },
-  DELIVERED:  { label: "Livrée",        icon: CheckCircle2, color: "text-green-400", step: 3 },
-};
-
-const STEPS = [
-  { key: "ASSIGNED",  label: "Attribuée" },
-  { key: "PICKED_UP", label: "Collectée" },
-  { key: "IN_TRANSIT",label: "Transit" },
-  { key: "DELIVERED", label: "Livrée" },
-];
+import { drivingRoute, isLngLat, VITA_MAP_4D } from "@/lib/vita-map";
+import { statusLabel, toVitaStatus } from "@/lib/status";
 
 const NEXT_STATUS: Record<string, { next: string; label: string }> = {
-  ASSIGNED:   { next: "COLLECTING", label: "Démarrer collecte" },
-  ACCEPTED:   { next: "COLLECTING", label: "Démarrer collecte" },
-  COLLECTING: { next: "PICKED_UP",  label: "Colis collecté ✓" },
-  PICKED_UP:  { next: "IN_TRANSIT", label: "Démarrer livraison →" },
+  ASSIGNED: { next: "COLLECTING", label: "Démarrer collecte" },
+  ACCEPTED: { next: "COLLECTING", label: "Démarrer collecte" },
+  COLLECTING: { next: "PICKED_UP", label: "Colis collecté" },
+  PICKED_UP: { next: "IN_TRANSIT", label: "En route" },
 };
 
-/* ───────── Component ───────── */
 const MyDeliveries = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sharing, setSharing] = useState(false);
-  const [currentPos, setCurrentPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [currentPos, setCurrentPos] = useState<[number, number] | null>(null);
+  const [heading, setHeading] = useState<number | null>(null);
   const [activeIdx, setActiveIdx] = useState(0);
+  const [route, setRoute] = useState<Array<[number, number]>>([]);
+  const [etaMin, setEtaMin] = useState<number | null>(null);
   const watchIdRef = useRef<number | null>(null);
-  const toastShown = useRef(false);
 
   const load = async () => {
     if (!user) return;
@@ -62,7 +46,6 @@ const MyDeliveries = () => {
     load();
   }, [user]);
 
-  /* ---- GPS sharing ---- */
   const startSharing = () => {
     if (!navigator.geolocation || !user) {
       toast({ title: "GPS indisponible", variant: "destructive" });
@@ -71,23 +54,20 @@ const MyDeliveries = () => {
     setSharing(true);
     watchIdRef.current = navigator.geolocation.watchPosition(
       async (pos) => {
-        const { latitude, longitude, heading, speed } = pos.coords;
-        setCurrentPos({ lat: latitude, lng: longitude });
+        const next: [number, number] = [pos.coords.longitude, pos.coords.latitude];
+        setCurrentPos(next);
+        setHeading(typeof pos.coords.heading === "number" ? pos.coords.heading : null);
         await supabase.from("driver_pings").upsert({
           driver_id: user.id,
-          latitude,
-          longitude,
-          heading: heading ?? null,
-          speed: speed ?? null,
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          heading: pos.coords.heading ?? null,
+          speed: pos.coords.speed ?? null,
           updated_at: new Date().toISOString(),
         });
-        if (!toastShown.current) {
-          toast({ title: "GPS actif", description: "Position envoyée en temps réel" });
-          toastShown.current = true;
-        }
       },
       (err) => toast({ title: "Erreur GPS", description: err.message, variant: "destructive" }),
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 },
     );
   };
 
@@ -95,216 +75,226 @@ const MyDeliveries = () => {
     if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
     watchIdRef.current = null;
     setSharing(false);
-    toastShown.current = false;
     toast({ title: "GPS arrêté" });
   };
 
-  useEffect(() => () => { if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current); }, []);
+  useEffect(
+    () => () => {
+      if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
+    },
+    [],
+  );
 
-  /* ---- Status advance ---- */
   const advanceStatus = async (order: any) => {
     const next = NEXT_STATUS[String(order.status).toUpperCase()];
     if (!next) return;
-    const update: any = { status: next.next };
-    await supabase.from("orders").update(update).eq("id", order.id);
+    await supabase.from("orders").update({ status: next.next }).eq("id", order.id);
     if (next.next === "PICKED_UP") {
       await supabase.functions.invoke("issue-delivery-code", { body: { order_id: order.id } });
     }
-    toast({ title: next.label.replace(/[✓→]/g, "").trim(), description: "Statut mis à jour" });
+    toast({ title: next.label, description: "Statut mis à jour" });
     load();
   };
 
-  const active = orders.filter((o) => ["ASSIGNED", "ACCEPTED", "COLLECTING", "PICKED_UP", "IN_TRANSIT"].includes(String(o.status).toUpperCase()));
+  const active = orders.filter((o) =>
+    ["ASSIGNED", "ACCEPTED", "COLLECTING", "PICKED_UP", "IN_TRANSIT"].includes(String(o.status).toUpperCase()),
+  );
   const history = orders.filter((o) => ["DELIVERED", "CANCELLED"].includes(String(o.status).toUpperCase()));
   const current = active[activeIdx] ?? null;
+  const st = current ? toVitaStatus(current.status) : "";
 
-  /* ---- Timeline helpers ---- */
-  const currentStep = current ? STATUS_META[String(current.status).toUpperCase()]?.step ?? 0 : 0;
+  const pickup =
+    current && isLngLat([Number(current.pickup_lng), Number(current.pickup_lat)])
+      ? ([Number(current.pickup_lng), Number(current.pickup_lat)] as [number, number])
+      : null;
+  const drop =
+    current && isLngLat([Number(current.delivery_lng), Number(current.delivery_lat)])
+      ? ([Number(current.delivery_lng), Number(current.delivery_lat)] as [number, number])
+      : null;
 
-  /* ---- Markers ---- */
-  const markers = current
-    ? [
-        { coordinates: [Number(current.pickup_lng), Number(current.pickup_lat)] as [number, number], type: "pickup" as const, popup: "Ramassage" },
-        { coordinates: [Number(current.delivery_lng), Number(current.delivery_lat)] as [number, number], type: "delivery" as const, popup: "Livraison" },
-        ...(currentPos ? [{ coordinates: [currentPos.lng, currentPos.lat] as [number, number], type: "driver" as const, popup: "Moi" }] : []),
-      ]
-    : [];
+  useEffect(() => {
+    const from = currentPos || pickup;
+    const to = st === "PICKED_UP" || st === "IN_TRANSIT" ? drop : pickup;
+    if (!from || !to) {
+      setRoute([]);
+      setEtaMin(null);
+      return;
+    }
+    let live = true;
+    drivingRoute(from, to).then((res) => {
+      if (!live || !res) return;
+      setRoute(res.coordinates);
+      setEtaMin(res.durationSec ? Math.max(1, Math.round(res.durationSec / 60)) : null);
+    });
+    return () => {
+      live = false;
+    };
+  }, [currentPos?.[0], currentPos?.[1], pickup?.[0], pickup?.[1], drop?.[0], drop?.[1], st]);
 
-  return (
-    <DashboardLayout title="Mes livraisons" subtitle="Gérez vos courses en cours">
-      <div className="space-y-6 pb-24">
+  const markers = useMemo(() => {
+    const list: Array<{
+      coordinates: [number, number];
+      type: "pickup" | "delivery" | "driver" | "parcel";
+      popup: string;
+      heading?: number | null;
+    }> = [];
+    if (!current) return list;
+    if (pickup) list.push({ coordinates: pickup, type: "pickup", popup: "Ramassage" });
+    if (drop) list.push({ coordinates: drop, type: "delivery", popup: "Destinataire" });
+    if (currentPos) list.push({ coordinates: currentPos, type: "driver", popup: "Moi", heading });
+    if (st === "PICKED_UP" || st === "IN_TRANSIT") {
+      list.push({ coordinates: currentPos || pickup || drop!, type: "parcel", popup: "Colis" });
+    } else if (pickup) {
+      list.push({ coordinates: pickup, type: "parcel", popup: "Colis" });
+    }
+    return list.filter((m) => isLngLat(m.coordinates));
+  }, [current, pickup, drop, currentPos, heading, st]);
 
-        {/* ── Loading skeleton ── */}
-        {loading && (
-          <div className="space-y-4 animate-pulse">
-            <div className="h-48 bg-secondary rounded-2xl" />
-            <div className="h-24 bg-secondary rounded-2xl" />
-          </div>
-        )}
+  if (loading) {
+    return (
+      <DashboardLayout flush>
+        <div className="flex h-[calc(100dvh-3.5rem-5.5rem)] md:h-[calc(100dvh-4rem)] items-center justify-center bg-[#0b0c0e]">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
-        {!loading && active.length === 0 && (
-          <div className="bg-card border border-border rounded-2xl p-12 text-center space-y-4 animate-in fade-in duration-500">
-            <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto">
-              <Package className="w-8 h-8 text-muted-foreground" />
-            </div>
-            <h2 className="font-poppins font-semibold text-xl">Aucune course active</h2>
-            <p className="text-muted-foreground">Rendez-vous sur "Courses disponibles" pour en accepter une.</p>
-          </div>
-        )}
-
-        {/* ── Active course (single) ── */}
-        {!loading && current && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-
-            {/* Header + nav */}
-            <div className="flex items-center justify-between">
-              <div>
-                <Badge className="mb-1 bg-primary/10 text-primary border-primary/20">{STATUS_META[String(current.status).toUpperCase()]?.label ?? current.status}</Badge>
-                <p className="text-xs text-muted-foreground">Course {activeIdx + 1} / {active.length}</p>
-              </div>
-              <div className="flex gap-1">
-                <Button variant="ghost" size="icon" disabled={activeIdx === 0} onClick={() => setActiveIdx((i) => Math.max(0, i - 1))}>
-                  <ChevronLeft className="w-5 h-5" />
-                </Button>
-                <Button variant="ghost" size="icon" disabled={activeIdx >= active.length - 1} onClick={() => setActiveIdx((i) => Math.min(active.length - 1, i + 1))}>
-                  <ChevronRight className="w-5 h-5" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Timeline */}
-            <div className="bg-card border border-border rounded-2xl p-4">
-              <div className="flex items-center justify-between relative">
-                {/* connecting line */}
-                <div className="absolute top-4 left-4 right-4 h-0.5 bg-border">
-                  <div
-                    className="h-full bg-primary transition-all duration-700 ease-out"
-                    style={{ width: `${Math.min((currentStep / (STEPS.length - 1)) * 100, 100)}%` }}
-                  />
-                </div>
-                {STEPS.map((s, i) => {
-                  const done = i <= currentStep;
-                  const Icon = done ? CheckCircle2 : Circle;
-                  return (
-                    <div key={s.key} className="relative z-10 flex flex-col items-center gap-1.5">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${
-                        done ? "bg-primary border-primary text-black" : "bg-card border-border text-muted-foreground"
-                      }`}>
-                        <Icon className="w-4 h-4" />
-                      </div>
-                      <span className={`text-[10px] font-medium uppercase tracking-wider ${done ? "text-primary" : "text-muted-foreground"}`}>
-                        {s.label}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Map */}
-            <div className="bg-card border border-border rounded-2xl overflow-hidden h-[320px] relative">
-              <MapView markers={markers} className="absolute inset-0" readonly={true} center={markers[0]?.coordinates} />
-              {!sharing && (
-                <button
-                  onClick={startSharing}
-                  className="absolute bottom-3 right-3 z-10 w-12 h-12 bg-primary text-black rounded-full shadow-yellow flex items-center justify-center hover:scale-105 transition-transform"
-                  title="Activer GPS"
-                >
-                  <Navigation className="w-5 h-5" />
-                </button>
-              )}
-              {sharing && (
-                <div className="absolute bottom-3 right-3 z-10">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-primary rounded-full animate-ping opacity-40" />
-                    <button
-                      onClick={stopSharing}
-                      className="relative w-12 h-12 bg-primary text-black rounded-full shadow-yellow flex items-center justify-center hover:scale-105 transition-transform"
-                      title="Arrêter GPS"
-                    >
-                      <Navigation className="w-5 h-5" />
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Addresses card */}
-            <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mt-0.5">
-                  <CircleDot className="w-4 h-4 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Retrait</p>
-                  <p className="text-sm font-medium">{current.pickup_address}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mt-0.5">
-                  <Package className="w-4 h-4 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Livraison</p>
-                  <p className="text-sm font-medium">{current.delivery_address}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-2 border-t border-border">
-                <div className="text-sm text-muted-foreground">{current.distance} km</div>
-                <div className="text-xl font-bold text-primary">{Number(current.total_price ?? 0).toLocaleString()} FC</div>
-              </div>
-            </div>
-
-            {/* History */}
-            {history.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Historique</h3>
+  if (!current) {
+    return (
+      <DashboardLayout title="Mes livraisons" flush>
+        <div className="min-h-[calc(100dvh-3.5rem-5.5rem)] md:min-h-[calc(100dvh-4rem)] bg-[#0b0c0e] p-4 sm:p-6">
+          <div className="vita-panel-card mx-auto max-w-lg rounded-xl p-10 text-center space-y-4">
+            <Package className="w-8 h-8 text-primary mx-auto" />
+            <h2 className="font-heading font-semibold text-xl">Aucune course active</h2>
+            <p className="text-white/45 text-sm">Le dispatch doit vous attribuer un colis pour ouvrir la vue 4D.</p>
+            <Button asChild>
+              <Link to="/livreur">Retour mission</Link>
+            </Button>
+            {history.length > 0 ? (
+              <div className="pt-4 text-left space-y-2 border-t border-white/10">
+                <p className="text-[10px] uppercase tracking-[0.16em] text-white/35">Historique</p>
                 {history.slice(0, 5).map((o) => (
-                  <div key={o.id} className="bg-card border border-border rounded-xl p-4 flex items-center justify-between hover:border-primary/20 transition-colors">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{o.pickup_address} → {o.delivery_address}</p>
-                      <p className="text-xs text-muted-foreground">{new Date(o.created_at).toLocaleDateString("fr-FR")}</p>
-                    </div>
-                    <Badge className={String(o.status).toUpperCase() === "DELIVERED" ? "bg-green-500/10 text-green-400 border-green-500/20" : "bg-red-500/10 text-red-400 border-red-500/20"}>
-                      {STATUS_META[String(o.status).toUpperCase()]?.label ?? o.status}
-                    </Badge>
+                  <div key={o.id} className="flex items-center justify-between gap-3 text-sm">
+                    <p className="truncate text-white/70">{o.order_number}</p>
+                    <p className="text-white/40 shrink-0">{statusLabel(o.status)}</p>
                   </div>
                 ))}
               </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* ── Sticky bottom action bar ── */}
-      {current && (NEXT_STATUS[String(current.status).toUpperCase()] || String(current.status).toUpperCase() === "IN_TRANSIT") && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-black/90 backdrop-blur-xl border-t border-white/10 p-4 safe-area-pb">
-          <div className="max-w-3xl mx-auto flex items-center gap-3">
-            {current.recipient_phone && (
-              <a
-                href={`tel:${current.recipient_phone}`}
-                className="shrink-0 w-12 h-12 rounded-full bg-green-500 text-white flex items-center justify-center shadow-lg hover:scale-105 transition-transform"
-              >
-                <Phone className="w-5 h-5" />
-              </a>
-            )}
-            {String(current.status).toUpperCase() === "IN_TRANSIT" ? (
-              <Button asChild size="lg" className="flex-1 font-bold tracking-wide">
-                <Link to="/livreur">Saisir l’OTP destinataire</Link>
-              </Button>
-            ) : (
-              <Button
-                size="lg"
-                className="flex-1 font-bold tracking-wide"
-                onClick={() => advanceStatus(current)}
-              >
-                {NEXT_STATUS[String(current.status).toUpperCase()].label}
-              </Button>
-            )}
+            ) : null}
           </div>
         </div>
-      )}
+      </DashboardLayout>
+    );
+  }
+
+  return (
+    <DashboardLayout title="Mes livraisons" flush>
+      <div className="relative h-[calc(100dvh-3.5rem-5.5rem)] md:h-[calc(100dvh-4rem)] bg-[#0b0c0e]">
+        <MapView
+          markers={markers}
+          route={route}
+          readonly
+          pitch={VITA_MAP_4D.pitch}
+          bearing={VITA_MAP_4D.bearing}
+          zoom={VITA_MAP_4D.zoom}
+          className="absolute inset-0 rounded-none min-h-0"
+        />
+
+        <div className="pointer-events-none absolute inset-0 z-10 p-3 sm:p-5 lg:p-8 flex flex-col justify-between gap-3">
+          <div className="pointer-events-auto flex items-center justify-between gap-2">
+            <div className="vita-panel-card rounded-xl px-3 py-2 flex items-center gap-2">
+              <button
+                type="button"
+                disabled={activeIdx === 0}
+                onClick={() => setActiveIdx((i) => Math.max(0, i - 1))}
+                className="h-8 w-8 inline-flex items-center justify-center rounded-lg bg-white/5 disabled:opacity-30"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <div>
+                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/40">
+                  Colis {activeIdx + 1}/{active.length}
+                </p>
+                <p className="text-sm font-medium">{statusLabel(current.status)}</p>
+              </div>
+              <button
+                type="button"
+                disabled={activeIdx >= active.length - 1}
+                onClick={() => setActiveIdx((i) => Math.min(active.length - 1, i + 1))}
+                className="h-8 w-8 inline-flex items-center justify-center rounded-lg bg-white/5 disabled:opacity-30"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={sharing ? stopSharing : startSharing}
+              className={`h-11 px-4 rounded-full inline-flex items-center gap-2 text-sm font-semibold ${
+                sharing ? "bg-primary text-[#101214]" : "bg-white/10 text-white border border-white/15"
+              }`}
+            >
+              <Navigation className="w-4 h-4" />
+              {sharing ? "GPS live" : "Activer GPS"}
+            </button>
+          </div>
+
+          <MissionSheet
+            wide
+            number={current.order_number}
+            status={statusLabel(current.status)}
+            eta={etaMin ? `${etaMin} min` : undefined}
+            points={[
+              {
+                kind: "pickup",
+                title: current.pickup_address || "Ramassage",
+                detail: "Point de collecte",
+                active: ["ASSIGNED", "ACCEPTED", "COLLECTING"].includes(st),
+              },
+              {
+                kind: "parcel",
+                title: current.package_description || "Colis",
+                detail: `${Number(current.total_price ?? 0).toLocaleString("fr-FR")} FC · ${current.distance ?? "—"} km`,
+                active: st === "COLLECTING" || st === "PICKED_UP" || st === "IN_TRANSIT",
+              },
+              {
+                kind: "driver",
+                title: currentPos ? "Ma position" : "GPS off",
+                detail: currentPos ? "Flux 4D actif" : "Activez le GPS",
+                active: Boolean(currentPos),
+              },
+              {
+                kind: "drop",
+                title: current.recipient_name || "Destinataire",
+                detail: current.delivery_address || "Remise",
+                active: st === "IN_TRANSIT",
+              },
+            ]}
+            href="/livreur"
+            ctaLabel="Ouvrir la mission"
+          >
+            <div className="flex gap-2">
+              {current.recipient_phone ? (
+                <a
+                  href={`tel:${current.recipient_phone}`}
+                  className="vita-sheet__btn--ghost inline-flex h-[42px] w-[42px] items-center justify-center shrink-0"
+                >
+                  <Phone className="w-4 h-4" />
+                </a>
+              ) : null}
+              {NEXT_STATUS[st] ? (
+                <button type="button" className="flex-1" onClick={() => advanceStatus(current)}>
+                  {NEXT_STATUS[st].label}
+                </button>
+              ) : st === "IN_TRANSIT" ? (
+                <Button asChild className="flex-1 h-[42px]">
+                  <Link to="/livreur">Saisir l’OTP destinataire</Link>
+                </Button>
+              ) : null}
+            </div>
+          </MissionSheet>
+        </div>
+      </div>
     </DashboardLayout>
   );
 };

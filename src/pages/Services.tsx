@@ -2,38 +2,19 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Truck, Package, Users, Zap, Check, Headphones } from "lucide-react";
+import {
+  VitaArrowIcon,
+  VitaCheckIcon,
+  VitaExpressIcon,
+  VitaPriorityIcon,
+  VitaSupportIcon,
+} from "@/components/brand/VitaIcons";
+import { services } from "@/data/services";
 
-const services = [
-  {
-    icon: Truck,
-    title: "Livraison Express",
-    description: "Livraison rapide dans toute la ville de Kinshasa en moins de 45 minutes",
-    features: ["Suivi GPS en temps réel", "Notification instantanée", "Livraison 24/7"],
-    price: "À partir de 2 500 FC",
-  },
-  {
-    icon: Package,
-    title: "Transport de Colis",
-    description: "Transport sécurisé de vos colis et documents importants",
-    features: ["Emballage professionnel", "Assurance incluse", "Signature à réception"],
-    price: "À partir de 3 500 FC",
-  },
-  {
-    icon: Users,
-    title: "Service Entreprises",
-    description: "Solutions logistiques adaptées aux professionnels et entreprises",
-    features: ["Gestion multi-livraisons", "Facturation mensuelle", "Support dédié"],
-    price: "Sur devis",
-  },
-  {
-    icon: Zap,
-    title: "Livraison Prioritaire",
-    description: "Service ultra-rapide pour vos envois urgents et critiques",
-    features: ["Livraison en 30 minutes", "Livreurs dédiés", "Suivi premium"],
-    price: "À partir de 5 000 FC",
-  },
-];
+const serviceIcons = {
+  express: VitaExpressIcon,
+  priority: VitaPriorityIcon,
+};
 
 const Services = () => {
   return (
@@ -44,41 +25,54 @@ const Services = () => {
         <div className="container-custom max-w-3xl">
           <h1 className="text-3xl sm:text-5xl font-heading font-bold">Nos Services</h1>
           <p className="mt-5 text-base sm:text-lg text-muted-foreground leading-relaxed">
-            Découvrez notre gamme complète de services de livraison adaptés à tous vos besoins.
-            De la livraison express aux solutions entreprises, nous avons la solution parfaite pour vous.
+            Deux niveaux de prise en charge, un même engagement : transporter votre colis
+            avec clarté, suivi et remise sécurisée.
           </p>
         </div>
       </section>
 
       <section className="pb-16 sm:pb-20">
         <div className="container-custom">
-          <div className="grid md:grid-cols-2 gap-4 sm:gap-8">
-            {services.map((service) => (
-              <div
+          <div className="grid md:grid-cols-2 gap-5 sm:gap-8">
+            {services.map((service, index) => {
+              const ServiceIcon = serviceIcons[service.icon];
+              return (
+              <article
                 key={service.title}
-                className="border border-border rounded-xl p-5 sm:p-8 h-full flex flex-col"
+                className={`group relative overflow-hidden rounded-[1.5rem] p-6 sm:p-9 min-h-[29rem] flex flex-col ${
+                  index === 0 ? "bg-primary text-primary-foreground" : "bg-[#171717] text-white"
+                }`}
               >
-                <div className="flex items-start justify-between gap-4 mb-5">
-                  <service.icon className="w-7 h-7 text-primary shrink-0" strokeWidth={1.75} />
-                  <p className="text-lg sm:text-xl font-heading font-bold text-primary text-right">
-                    {service.price}
-                  </p>
+                <div className={`flex h-16 w-16 items-center justify-center rounded-2xl ${
+                  index === 0 ? "bg-black/10" : "bg-primary/10 text-primary"
+                }`}>
+                  <ServiceIcon className="h-9 w-9" />
                 </div>
-                <h3 className="text-xl sm:text-2xl font-heading font-semibold mb-3">{service.title}</h3>
-                <p className="text-muted-foreground mb-6 leading-relaxed">{service.description}</p>
+                <p className={`mt-8 text-xs font-medium uppercase tracking-[0.16em] ${
+                  index === 0 ? "text-black/55" : "text-primary"
+                }`}>{service.eyebrow}</p>
+                <h2 className="mt-3 text-2xl sm:text-3xl font-heading font-semibold">{service.title}</h2>
+                <p className={`mt-4 leading-relaxed ${
+                  index === 0 ? "text-black/70" : "text-white/60"
+                }`}>{service.description}</p>
                 <div className="space-y-3 mb-8 flex-1">
-                  {service.features.map((feature) => (
-                    <div key={feature} className="flex items-center gap-3">
-                      <Check className="w-4 h-4 text-primary shrink-0" strokeWidth={2} />
+                  {service.features.slice(0, 3).map((feature) => (
+                    <div key={feature} className="mt-5 flex items-start gap-3">
+                      <VitaCheckIcon className={`mt-0.5 w-4 h-4 shrink-0 ${
+                        index === 0 ? "text-black" : "text-primary"
+                      }`} />
                       <span className="text-sm">{feature}</span>
                     </div>
                   ))}
                 </div>
-                <Link to="/auth/register">
-                  <Button className="w-full">Commander ce service</Button>
+                <Link to={`/services/${service.slug}`}>
+                  <Button variant={index === 0 ? "secondary" : "outline"} className="w-full group/cta">
+                    Découvrir le service
+                    <VitaArrowIcon className="h-4 w-4 transition-transform group-hover/cta:translate-x-1" />
+                  </Button>
                 </Link>
-              </div>
-            ))}
+              </article>
+            )})}
           </div>
         </div>
       </section>
@@ -96,7 +90,7 @@ const Services = () => {
             <Link to="/contact" className="w-full sm:w-auto">
               <Button size="lg" className="w-full">
                 Contacter nos experts
-                <Headphones className="w-4 h-4" />
+                <VitaSupportIcon className="w-4 h-4" />
               </Button>
             </Link>
             <Link to="/auth/register" className="w-full sm:w-auto">

@@ -4,8 +4,28 @@ import { useMapboxToken } from "@/hooks/useMapboxToken";
 
 export const KINSHASA: [number, number] = [15.3078, -4.3276];
 
-/** Dark vector style, no Mapbox key. */
-export const VITA_BASEMAP = "https://tiles.openfreemap.org/styles/dark";
+/** Preferred when the Mapbox public token can serve tiles. */
+export const MAPBOX_DARK = "mapbox://styles/mapbox/dark-v11";
+
+/** Reliable dark basemap (no Mapbox billing / URL allowlist). */
+export const CARTO_DARK: StyleSpecification = {
+  version: 8,
+  name: "vita-carto-dark",
+  sources: {
+    carto: {
+      type: "raster",
+      tiles: [
+        "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
+        "https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
+        "https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
+      ],
+      tileSize: 256,
+      attribution: "© OpenStreetMap © CARTO",
+    },
+  },
+  layers: [{ id: "carto", type: "raster", source: "carto" }],
+  glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
+};
 
 export const ESRI_STREETS: StyleSpecification = {
   version: 8,
@@ -23,9 +43,22 @@ export const ESRI_STREETS: StyleSpecification = {
   layers: [{ id: "streets", type: "raster", source: "streets" }],
 };
 
+/** @deprecated kept for older imports */
+export const VITA_BASEMAP = CARTO_DARK;
+
+export function resolveMapStyle(token?: string | null) {
+  if (token && token.startsWith("pk.")) return MAPBOX_DARK;
+  return CARTO_DARK;
+}
+
+/** 4D depth: extruded buildings + atmospheric fog when vector tiles exist. */
 export function addVitaBuildings(map: mapboxgl.Map) {
   if (map.getLayer("vita-buildings")) return;
-  const src = map.getSource("openmaptiles") ? "openmaptiles" : map.getSource("composite") ? "composite" : null;
+  const src = map.getSource("openmaptiles")
+    ? "openmaptiles"
+    : map.getSource("composite")
+      ? "composite"
+      : null;
   if (!src) return;
   try {
     map.addLayer({
@@ -33,30 +66,74 @@ export function addVitaBuildings(map: mapboxgl.Map) {
       source: src,
       "source-layer": "building",
       type: "fill-extrusion",
-      minzoom: 13,
+      minzoom: 12.5,
       paint: {
-        "fill-extrusion-color": "#1a1c20",
-        "fill-extrusion-height": ["coalesce", ["get", "render_height"], ["get", "height"], 14],
+        "fill-extrusion-color": [
+          "interpolate",
+          ["linear"],
+          ["coalesce", ["get", "render_height"], ["get", "height"], 14],
+          0, "#14161a",
+          20, "#1c1f24",
+          60, "#252830",
+        ],
+        "fill-extrusion-height": ["coalesce", ["get", "render_height"], ["get", "height"], 16],
         "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], ["get", "min_height"], 0],
-        "fill-extrusion-opacity": 0.86,
+        "fill-extrusion-opacity": 0.9,
       },
     });
   } catch {
-    /* raster */
+    /* raster basemap */
   }
 }
 
-export function bindMapToken(token?: string | null) {
-  mapboxgl.accessToken = token || "pk.vita";
+export function applyVitaAtmosphere(map: mapboxgl.Map, enabled = true) {
+  if (!enabled) return;
+  try {
+    map.setFog({
+      color: "rgb(12, 13, 15)",
+      "high-color": "rgb(28, 32, 40)",
+      "horizon-blend": 0.08,
+      "space-color": "rgb(8, 9, 11)",
+      "star-intensity": 0,
+      range: [0.6, 12],
+    });
+  } catch {
+    /* style without fog support */
+  }
 }
 
-export function resolveVitaMapStyle(_token?: string | null) {
-  return Promise.resolve(VITA_BASEMAP);
+export const VITA_MAP_4D = {
+  pitch: 62,
+  bearing: 26,
+  zoom: 14.1,
+} as const;
+
+/** Nudge colocated pins so colis / livreur stay readable. */
+export function offsetLngLat(
+  base: [number, number],
+  metersEast: number,
+  metersNorth: number,
+): [number, number] {
+  const [lng, lat] = base;
+  const dLat = metersNorth / 111_320;
+  const dLng = metersEast / (111_320 * Math.cos((lat * Math.PI) / 180));
+  return [lng + dLng, lat + dLat];
+}
+
+export function bindMapToken(token?: string | null) {
+  const envToken = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
+  mapboxgl.accessToken = token || envToken || "";
 }
 
 export function useVitaMapStyle() {
   const { token, loading } = useMapboxToken();
-  return { token, style: VITA_BASEMAP, loading };
+  const envToken = (import.meta.env.VITE_MAPBOX_TOKEN as string | undefined) || null;
+  const resolved = token || envToken;
+  return {
+    token: resolved,
+    style: resolveMapStyle(resolved),
+    loading,
+  };
 }
 
 const photonName = (p: Record<string, unknown> | undefined) => {

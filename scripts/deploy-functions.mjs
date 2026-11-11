@@ -21,9 +21,17 @@ const fns = [
   { slug: "get-mapbox-token", jwt: false },
   { slug: "request-phone-otp", jwt: false },
   { slug: "verify-phone-otp", jwt: false },
+  { slug: "request-password-reset", jwt: false },
 ];
 
-for (const fn of fns) {
+const requested = process.argv.slice(2);
+const selected = requested.length ? fns.filter((fn) => requested.includes(fn.slug)) : fns;
+if (requested.length && selected.length !== requested.length) {
+  log("Fonction inconnue dans les arguments");
+  process.exit(1);
+}
+
+for (const fn of selected) {
   const body = readFileSync(`supabase/functions/${fn.slug}/index.ts`);
   const fd = new FormData();
   fd.append(
