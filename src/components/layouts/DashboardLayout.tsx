@@ -106,8 +106,8 @@ const DashboardLayout = ({ children, title, flush }: DashboardLayoutProps) => {
           >
             <Menu className="w-4 h-4" strokeWidth={1.8} />
           </button>
-          <Link to={HOME_BY_ROLE[role]} className="shrink-0">
-            <VitaWordmark lockup className="h-7" />
+          <Link to={HOME_BY_ROLE[role]} className="shrink-0" aria-label="Vita Express">
+            <VitaWordmark symbolOnly className="h-8 w-8" />
           </Link>
           <p className="min-w-0 flex-1 font-heading text-[15px] font-semibold tracking-tight truncate text-right">
             {pageLabel}

@@ -7,6 +7,12 @@ export const KINSHASA: [number, number] = [15.3078, -4.3276];
 /** Preferred when the Mapbox public token can serve tiles. */
 export const MAPBOX_DARK = "mapbox://styles/mapbox/dark-v11";
 
+/** Navigation-style basemap (closer to Google/Yango for live trips). */
+export const MAPBOX_NAV = "mapbox://styles/mapbox/navigation-night-v1";
+
+/** Day streets — realistic road labels for dispatch. */
+export const MAPBOX_STREETS = "mapbox://styles/mapbox/streets-v12";
+
 /** Reliable dark basemap (no Mapbox billing / URL allowlist). */
 export const CARTO_DARK: StyleSpecification = {
   version: 8,

@@ -223,7 +223,7 @@ const Orders = () => {
       delivery_contact: destContact,
       delivery_zone_id: quote?.deliveryZoneId ?? null,
       distance: dist,
-      base_price: 1500,
+      base_price: 4500,
       total_price: total,
       package_description: (packageType === "Autre" ? packageOther : packageType) || null,
       special_instructions: notes || null,

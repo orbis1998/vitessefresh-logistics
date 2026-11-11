@@ -241,6 +241,7 @@ const MyDeliveries = () => {
 
           <MissionSheet
             wide
+            defaultCollapsed
             number={current.order_number}
             status={statusLabel(current.status)}
             eta={etaMin ? `${etaMin} min` : undefined}

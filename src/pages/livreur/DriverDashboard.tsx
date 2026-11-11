@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Navigation, Package } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import MapView from "@/components/MapView";
 import MissionSheet from "@/components/ops/MissionSheet";
@@ -24,9 +24,22 @@ const DriverDashboard = () => {
   const [route, setRoute] = useState<Array<[number, number]>>([]);
   const [etaMin, setEtaMin] = useState<number | null>(null);
 
+  const ensureProfile = useCallback(async () => {
+    if (!user) return null;
+    const { data: existing } = await supabase.from("driver_profiles").select("*").eq("user_id", user.id).maybeSingle();
+    if (existing) return existing;
+    // Admin may already have created the row; if RLS delayed visibility, upsert quietly.
+    const { data: created } = await supabase
+      .from("driver_profiles")
+      .upsert({ user_id: user.id, available: true }, { onConflict: "user_id" })
+      .select("*")
+      .maybeSingle();
+    return created;
+  }, [user]);
+
   const load = useCallback(async () => {
     if (!user) return;
-    const { data: dp } = await supabase.from("driver_profiles").select("*").eq("user_id", user.id).maybeSingle();
+    const dp = await ensureProfile();
     setDriver(dp);
     const { data: active } = await supabase
       .from("orders")
@@ -47,7 +60,7 @@ const DriverDashboard = () => {
       .gte("delivered_at", start.toISOString());
     setEarned((done ?? []).reduce((s, o) => s + Number(o.total_price ?? 0), 0));
     setLoading(false);
-  }, [user]);
+  }, [user, ensureProfile]);
 
   useEffect(() => {
     load();
@@ -111,12 +124,6 @@ const DriverDashboard = () => {
     }
   };
 
-  const createDriverProfile = async () => {
-    if (!user) return;
-    await supabase.from("driver_profiles").upsert({ user_id: user.id });
-    load();
-  };
-
   const st = mission ? toVitaStatus(mission.status) : "";
   const pickup =
     mission && isLngLat([Number(mission.pickup_lng), Number(mission.pickup_lat)])
@@ -169,7 +176,7 @@ const DriverDashboard = () => {
         {
           kind: "pickup" as const,
           title: mission.pickup_address || "Point de retrait",
-          detail: "Aller collecter le colis",
+          detail: "Collecter le colis",
           active: ["ASSIGNED", "ACCEPTED", "COLLECTING"].includes(st),
         },
         {
@@ -180,8 +187,8 @@ const DriverDashboard = () => {
         },
         {
           kind: "driver" as const,
-          title: selfLoc ? "Ma position GPS" : "GPS inactif",
-          detail: selfLoc ? "Flux live 4D" : "Autorisez la localisation",
+          title: selfLoc ? "Navigation GPS" : "Activez le GPS",
+          detail: selfLoc ? "Position live" : "Autorisez la localisation",
           active: Boolean(selfLoc),
         },
         {
@@ -192,9 +199,9 @@ const DriverDashboard = () => {
         },
       ]
     : [
-        { kind: "pickup" as const, title: "En attente", detail: "Pas de course attribuée" },
-        { kind: "parcel" as const, title: "Colis", detail: "Apparaitra avec la mission" },
-        { kind: "driver" as const, title: "Livreur", detail: driver?.available ? "En ligne" : "Hors ligne" },
+        { kind: "pickup" as const, title: "En attente de course", detail: "Le dispatch vous attribue une mission" },
+        { kind: "parcel" as const, title: "Colis", detail: "Apparaitra ici" },
+        { kind: "driver" as const, title: driver?.available ? "En ligne" : "Hors ligne", detail: "Statut livreur" },
         { kind: "drop" as const, title: "Destinataire", detail: "Prochaine remise" },
       ];
 
@@ -208,20 +215,6 @@ const DriverDashboard = () => {
     );
   }
 
-  if (!driver) {
-    return (
-      <DashboardLayout title="Mission">
-        <div className="vita-panel-card rounded-xl p-8 max-w-lg">
-          <h2 className="font-heading text-xl font-semibold">Activer le profil livreur</h2>
-          <p className="mt-2 text-sm text-white/50">Une fois actif, la carte 4D affichera vos colis et votre trajet.</p>
-          <Button className="mt-6" onClick={createDriverProfile}>
-            Créer mon profil
-          </Button>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
   return (
     <DashboardLayout title="Mission" flush>
       <div className="relative h-[calc(100dvh-3.5rem-5.5rem)] md:h-[calc(100dvh-4rem)] bg-[#0b0c0e]">
@@ -229,37 +222,47 @@ const DriverDashboard = () => {
           markers={markers}
           route={route}
           readonly
+          mapStyle="nav"
+          sheetPadding={240}
           pitch={VITA_MAP_4D.pitch}
           bearing={VITA_MAP_4D.bearing}
           zoom={VITA_MAP_4D.zoom}
           className="absolute inset-0 rounded-none min-h-0"
         />
 
-        <div className="pointer-events-none absolute inset-0 z-10 p-3 sm:p-5 lg:p-8 flex flex-col justify-between gap-3">
-          <div className="pointer-events-auto flex items-center justify-between gap-3 self-stretch">
-            <div className="vita-panel-card rounded-xl px-4 py-3">
-              <p className="text-[10px] uppercase tracking-[0.18em] text-white/40">Gains du jour</p>
-              <p className="font-heading text-xl font-bold text-primary tabular-nums">{earned.toLocaleString("fr-FR")} FC</p>
+        <div className="pointer-events-none absolute inset-0 z-10 p-3 sm:p-4 lg:p-6 flex flex-col justify-between gap-3">
+          <div className="pointer-events-auto flex items-center justify-between gap-2 self-stretch">
+            <div className="vita-panel-card rounded-xl px-3 py-2.5 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center">
+                {mission ? <Navigation className="w-4 h-4 text-primary" /> : <Package className="w-4 h-4 text-primary" />}
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.16em] text-white/40">Aujourd’hui</p>
+                <p className="font-heading text-lg font-bold text-primary tabular-nums leading-none">
+                  {earned.toLocaleString("fr-FR")} FC
+                </p>
+              </div>
             </div>
             <button
               type="button"
-              onClick={() => setOnline(!driver.available)}
+              onClick={() => setOnline(!driver?.available)}
               className={`rounded-full h-11 px-4 text-sm font-semibold ${
-                driver.available ? "bg-white/10 text-white border border-white/15" : "bg-primary text-[#101214]"
+                driver?.available ? "bg-primary text-[#101214]" : "bg-white/10 text-white border border-white/15"
               }`}
             >
-              {driver.available ? "En ligne" : "Passer en ligne"}
+              {driver?.available ? "En ligne" : "Passer en ligne"}
             </button>
           </div>
 
           <MissionSheet
             wide
+            defaultCollapsed
             number={mission?.order_number}
-            status={mission ? statusLabel(mission.status) : "Aucune mission — attente dispatch"}
+            status={mission ? statusLabel(mission.status) : "Prêt — en attente d’une course"}
             eta={etaMin ? `${etaMin} min` : undefined}
             points={points}
             href="/livreur/livraisons"
-            ctaLabel="Voir mes colis"
+            ctaLabel="Mes colis"
           >
             {mission ? (
               <>
@@ -294,7 +297,9 @@ const DriverDashboard = () => {
                 )}
               </>
             ) : (
-              <p className="text-xs text-white/45">Le dispatch doit vous attribuer une course pour afficher le flux 4D.</p>
+              <p className="text-xs text-white/45">
+                Passez en ligne. Dès qu’une course est attribuée, la navigation type Yango s’affiche ici.
+              </p>
             )}
           </MissionSheet>
         </div>

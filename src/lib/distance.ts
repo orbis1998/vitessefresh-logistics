@@ -3,7 +3,7 @@ export function haversineKm(
   lat1: number,
   lng1: number,
   lat2: number,
-  lng2: number
+  lng2: number,
 ): number {
   const R = 6371;
   const toRad = (d: number) => (d * Math.PI) / 180;
@@ -15,10 +15,10 @@ export function haversineKm(
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// Tarification Vita Express : forfait base 1500 FC + 800 FC/km
-export function computePriceFC(distanceKm: number, baseZonePrice = 1500): number {
-  const perKm = 800;
-  const minPrice = 2000;
+/** Client preview — aligné sur la grille min 4 500 FC. */
+export function computePriceFC(distanceKm: number, baseZonePrice = 4500): number {
+  const perKm = 700;
+  const minPrice = 4500;
   const raw = baseZonePrice + distanceKm * perKm;
   return Math.max(minPrice, Math.round(raw / 100) * 100);
 }
@@ -28,5 +28,6 @@ export function formatFC(amount: number) {
 }
 
 export function estimateMinutes(distanceKm: number) {
-  return Math.max(12, Math.round(distanceKm / 0.28));
+  // ~22 km/h moyenne Kinshasa moto + embouteillage
+  return Math.max(12, Math.round((distanceKm / 22) * 60));
 }

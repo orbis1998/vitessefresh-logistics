@@ -207,6 +207,8 @@ const Tracking = () => {
             markers={markers}
             route={route ?? []}
             readonly
+            mapStyle="nav"
+            sheetPadding={230}
             pitch={62}
             bearing={26}
             className="absolute inset-0 rounded-none min-h-0"
@@ -214,6 +216,7 @@ const Tracking = () => {
           />
           <div className="pointer-events-none absolute inset-0 z-10 p-3 sm:p-5 lg:p-8 flex flex-col justify-end lg:justify-start">
             <MissionSheet
+              defaultCollapsed
               number={order.order_number}
               status={STATUS_META[st]?.label || st}
               eta={etaLabel}

@@ -12,20 +12,27 @@ export type PricingRule = {
   specialHandlingFc: number;
   declaredValueRate: number;
   trafficEnabled: boolean;
+  /** Multiplier for rain / bad weather (1 = off). */
+  climateSurchargeRate: number;
+  /** Multiplier for congestion (1 = off). */
+  trafficSurchargeRate: number;
 };
 
+/** Vita Express default grid — course from 4 500 FC. */
 export const DEFAULT_PRICING: PricingRule = {
-  version: "2026-10-grid-1",
-  baseFc: 1500,
-  perKmFc: 500,
-  minFc: 2000,
+  version: "2026-11-grid-4500",
+  baseFc: 4500,
+  perKmFc: 700,
+  minFc: 4500,
   weightStepKg: 5,
-  weightSurchargeFc: 300,
-  volumetricEnabled: false,
-  urgentSurchargeFc: 0,
-  specialHandlingFc: 0,
-  declaredValueRate: 0,
-  trafficEnabled: false,
+  weightSurchargeFc: 400,
+  volumetricEnabled: true,
+  urgentSurchargeFc: 1500,
+  specialHandlingFc: 800,
+  declaredValueRate: 0.01,
+  trafficEnabled: true,
+  climateSurchargeRate: 0.12,
+  trafficSurchargeRate: 0.18,
 };
 
 export type QuoteInput = {
@@ -42,6 +49,10 @@ export type QuoteInput = {
   specialHandling?: boolean;
   declaredValueFc?: number | null;
   planDiscountFc?: number;
+  /** 0–1 estimated congestion (Mapbox/OSRM duration vs free-flow). */
+  trafficFactor?: number | null;
+  /** Bad weather / rain season flag. */
+  badClimate?: boolean;
 };
 
 export type QuoteBreakdown = {
@@ -62,8 +73,11 @@ export function computeQuote(input: QuoteInput, rule: PricingRule = DEFAULT_PRIC
   const useRoad = input.roadKm != null && input.roadKm > 0;
   const distanceKm = Number((useRoad ? input.roadKm! : hav).toFixed(2));
   const lines: { label: string; amount: number }[] = [];
-  lines.push({ label: "Base", amount: rule.baseFc });
-  lines.push({ label: `Distance ${distanceKm} km × ${rule.perKmFc} FC`, amount: Math.round(distanceKm * rule.perKmFc) });
+  lines.push({ label: "Prise en charge", amount: rule.baseFc });
+  lines.push({
+    label: `Distance ${distanceKm} km × ${rule.perKmFc} FC`,
+    amount: Math.round(distanceKm * rule.perKmFc),
+  });
 
   let billableKg = input.weightKg ?? 0;
   if (rule.volumetricEnabled) {
@@ -71,12 +85,32 @@ export function computeQuote(input: QuoteInput, rule: PricingRule = DEFAULT_PRIC
   }
   if (billableKg > rule.weightStepKg) {
     const extra = Math.ceil((billableKg - rule.weightStepKg) / rule.weightStepKg) * rule.weightSurchargeFc;
-    lines.push({ label: "Poids", amount: extra });
+    lines.push({ label: `Poids ${billableKg.toFixed(1)} kg`, amount: extra });
   }
   if (rule.urgentSurchargeFc && input.urgent) lines.push({ label: "Urgence", amount: rule.urgentSurchargeFc });
-  if (rule.specialHandlingFc && input.specialHandling) lines.push({ label: "Manutention", amount: rule.specialHandlingFc });
+  if (rule.specialHandlingFc && input.specialHandling) {
+    lines.push({ label: "Manutention spéciale", amount: rule.specialHandlingFc });
+  }
   if (rule.declaredValueRate && input.declaredValueFc) {
-    lines.push({ label: "Couverture valeur", amount: Math.round(input.declaredValueFc * rule.declaredValueRate) });
+    lines.push({
+      label: "Couverture valeur",
+      amount: Math.round(input.declaredValueFc * rule.declaredValueRate),
+    });
+  }
+
+  const subtotal = lines.reduce((s, l) => s + l.amount, 0);
+  if (input.badClimate && rule.climateSurchargeRate > 0) {
+    lines.push({
+      label: "Climat / pluie",
+      amount: Math.round(subtotal * rule.climateSurchargeRate),
+    });
+  }
+  const congestion = Math.min(1, Math.max(0, input.trafficFactor ?? 0));
+  if (rule.trafficEnabled && rule.trafficSurchargeRate > 0 && congestion > 0.08) {
+    lines.push({
+      label: `Embouteillage ${Math.round(congestion * 100)}%`,
+      amount: Math.round(subtotal * rule.trafficSurchargeRate * congestion),
+    });
   }
   if (input.planDiscountFc) lines.push({ label: "Forfait", amount: -Math.abs(input.planDiscountFc) });
 

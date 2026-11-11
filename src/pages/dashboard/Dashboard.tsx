@@ -128,6 +128,8 @@ const Dashboard = () => {
           markers={markers}
           route={route}
           readonly
+          mapStyle="nav"
+          sheetPadding={220}
           pitch={VITA_MAP_4D.pitch}
           bearing={VITA_MAP_4D.bearing}
           zoom={VITA_MAP_4D.zoom}
@@ -135,6 +137,7 @@ const Dashboard = () => {
         />
         <div className="pointer-events-none absolute inset-0 z-10 p-3 sm:p-5 lg:p-8 flex flex-col justify-end lg:justify-start lg:items-start">
           <MissionSheet
+            defaultCollapsed
             number={active?.order_number}
             status={active ? statusLabel(active.status) : "Aucune course en cours"}
             eta={etaMin ? `${etaMin} min` : undefined}

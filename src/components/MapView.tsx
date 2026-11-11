@@ -11,6 +11,7 @@ import {
   isLngLat,
   KINSHASA,
   MAPBOX_DARK,
+  MAPBOX_NAV,
   offsetLngLat,
   reverseGeocode,
   useVitaMapStyle,
@@ -22,6 +23,10 @@ interface MapViewProps {
   zoom?: number;
   pitch?: number;
   bearing?: number;
+  /** `nav` = Yango-like night navigation style when Mapbox tiles work. */
+  mapStyle?: "dark" | "nav";
+  /** Extra bottom padding when a bottom sheet covers the map. */
+  sheetPadding?: number;
   markers?: Array<{
     coordinates: [number, number];
     popup?: string;
@@ -50,6 +55,8 @@ const MapView = ({
   zoom = VITA_MAP_4D.zoom,
   pitch = VITA_MAP_4D.pitch,
   bearing = VITA_MAP_4D.bearing,
+  mapStyle = "nav",
+  sheetPadding = 200,
   markers = [],
   showDriverLocation = false,
   driverLocation,
@@ -97,10 +104,11 @@ const MapView = ({
       setIsVector(preferMapbox);
       const viewPitch = preferMapbox ? pitch : Math.min(pitch, 42);
       const viewBearing = preferMapbox ? bearing : Math.min(Math.abs(bearing), 12);
+      const vectorStyle = mapStyle === "nav" ? MAPBOX_NAV : MAPBOX_DARK;
 
       const instance = new mapboxgl.Map({
         container: node,
-        style: preferMapbox ? MAPBOX_DARK : CARTO_DARK,
+        style: preferMapbox ? vectorStyle : CARTO_DARK,
         center: isLngLat(center) ? center : KINSHASA,
         zoom,
         pitch: viewPitch,
@@ -238,7 +246,7 @@ const MapView = ({
       pts.forEach((p) => b.extend(p));
       try {
         instance.fitBounds(b, {
-          padding: { top: 72, bottom: 220, left: 48, right: 48 },
+          padding: { top: 72, bottom: Math.max(120, sheetPadding), left: 48, right: 48 },
           maxZoom: 15.4,
           duration: 700,
           pitch: viewPitch,
@@ -250,7 +258,7 @@ const MapView = ({
     } else if (pts.length === 1) {
       instance.easeTo({ center: pts[0], zoom: 14.6, pitch: viewPitch, bearing: viewBearing, duration: 500 });
     }
-  }, [markers, showDriverLocation, driverLocation, ready, pitch, bearing, isVector]);
+  }, [markers, showDriverLocation, driverLocation, ready, pitch, bearing, isVector, sheetPadding]);
 
   useEffect(() => {
     const instance = map.current;

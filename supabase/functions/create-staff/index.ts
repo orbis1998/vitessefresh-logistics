@@ -62,7 +62,11 @@ Deno.serve(async (req) => {
     role: vitaRole,
   });
   if (vitaRole === "DRIVER") {
-    await admin.from("driver_profiles").upsert({ user_id: created.user.id });
+    await admin.from("driver_profiles").upsert({
+      user_id: created.user.id,
+      available: true,
+      approved: true,
+    });
   }
   await admin.from("audit_events").insert({
     actor_id: userData.user.id,

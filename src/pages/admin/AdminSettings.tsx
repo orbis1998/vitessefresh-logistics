@@ -17,9 +17,14 @@ const AdminSettings = () => {
   const [zones, setZones] = useState<any[]>([]);
   const [name, setName] = useState("");
   const [category, setCategory] = useState("served");
-  const [perKm, setPerKm] = useState("500");
-  const [base, setBase] = useState("1500");
-  const [minFc, setMinFc] = useState("2000");
+  const [perKm, setPerKm] = useState("700");
+  const [base, setBase] = useState("4500");
+  const [minFc, setMinFc] = useState("4500");
+  const [weightStep, setWeightStep] = useState("5");
+  const [weightFee, setWeightFee] = useState("400");
+  const [valueRate, setValueRate] = useState("0.01");
+  const [climateRate, setClimateRate] = useState("0.12");
+  const [trafficRate, setTrafficRate] = useState("0.18");
   const [auto, setAuto] = useState(false);
   const [activeGrid, setActiveGrid] = useState<any | null>(null);
 
@@ -33,9 +38,14 @@ const AdminSettings = () => {
     setAuto(setting?.value === true);
     setActiveGrid(grid);
     if (grid?.rules) {
-      setBase(String(grid.rules.baseFc ?? 1500));
-      setPerKm(String(grid.rules.perKmFc ?? 500));
-      setMinFc(String(grid.rules.minFc ?? 2000));
+      setBase(String(grid.rules.baseFc ?? 4500));
+      setPerKm(String(grid.rules.perKmFc ?? 700));
+      setMinFc(String(grid.rules.minFc ?? 4500));
+      setWeightStep(String(grid.rules.weightStepKg ?? 5));
+      setWeightFee(String(grid.rules.weightSurchargeFc ?? 400));
+      setValueRate(String(grid.rules.declaredValueRate ?? 0.01));
+      setClimateRate(String(grid.rules.climateSurchargeRate ?? 0.12));
+      setTrafficRate(String(grid.rules.trafficSurchargeRate ?? 0.18));
     }
   };
 
@@ -48,7 +58,7 @@ const AdminSettings = () => {
     const { error } = await supabase.from("zones").insert({
       name: name.trim(),
       commune: name.trim(),
-      base_price: Number(base) || 1500,
+      base_price: Number(base) || 4500,
       category,
       active: true,
     });
@@ -76,16 +86,18 @@ const AdminSettings = () => {
       version: `grid-${Date.now()}`,
       active: true,
       rules: {
-        baseFc: Number(base),
-        perKmFc: Number(perKm),
-        minFc: Number(minFc),
-        weightStepKg: 5,
-        weightSurchargeFc: 300,
-        volumetricEnabled: false,
-        urgentSurchargeFc: 1000,
-        specialHandlingFc: 500,
-        declaredValueRate: 0,
-        trafficEnabled: false,
+        baseFc: Number(base) || 4500,
+        perKmFc: Number(perKm) || 700,
+        minFc: Number(minFc) || 4500,
+        weightStepKg: Number(weightStep) || 5,
+        weightSurchargeFc: Number(weightFee) || 400,
+        volumetricEnabled: true,
+        urgentSurchargeFc: 1500,
+        specialHandlingFc: 800,
+        declaredValueRate: Number(valueRate) || 0,
+        trafficEnabled: true,
+        climateSurchargeRate: Number(climateRate) || 0,
+        trafficSurchargeRate: Number(trafficRate) || 0,
       },
     });
     toast({ title: "Nouvelle grille publiée" });
@@ -113,11 +125,13 @@ const AdminSettings = () => {
         <section className="rounded-2xl border border-white/10 p-5 space-y-4">
           <div>
             <p className="font-heading font-semibold">Grille tarifaire</p>
-            <p className="text-sm text-white/50">Version active : {activeGrid?.version || "aucune"} · le trafic n’est pas facturé.</p>
+            <p className="text-sm text-white/50">
+              Version active : {activeGrid?.version || "aucune"} · prise en charge dès 4 500 FC (modifiable). Style Yango : distance, poids, valeur, climat, embouteillage.
+            </p>
           </div>
           <div className="grid sm:grid-cols-3 gap-3">
             <div>
-              <p className="text-xs text-white/40 mb-1">Base (FC)</p>
+              <p className="text-xs text-white/40 mb-1">Base / prise en charge (FC)</p>
               <Input value={base} onChange={(e) => setBase(e.target.value)} className="bg-white/5 border-white/10" />
             </div>
             <div>
@@ -127,6 +141,26 @@ const AdminSettings = () => {
             <div>
               <p className="text-xs text-white/40 mb-1">Minimum (FC)</p>
               <Input value={minFc} onChange={(e) => setMinFc(e.target.value)} className="bg-white/5 border-white/10" />
+            </div>
+            <div>
+              <p className="text-xs text-white/40 mb-1">Seuil poids (kg)</p>
+              <Input value={weightStep} onChange={(e) => setWeightStep(e.target.value)} className="bg-white/5 border-white/10" />
+            </div>
+            <div>
+              <p className="text-xs text-white/40 mb-1">Supplément / palier poids (FC)</p>
+              <Input value={weightFee} onChange={(e) => setWeightFee(e.target.value)} className="bg-white/5 border-white/10" />
+            </div>
+            <div>
+              <p className="text-xs text-white/40 mb-1">Taux couverture valeur (ex 0.01)</p>
+              <Input value={valueRate} onChange={(e) => setValueRate(e.target.value)} className="bg-white/5 border-white/10" />
+            </div>
+            <div>
+              <p className="text-xs text-white/40 mb-1">Climat / pluie (ex 0.12)</p>
+              <Input value={climateRate} onChange={(e) => setClimateRate(e.target.value)} className="bg-white/5 border-white/10" />
+            </div>
+            <div>
+              <p className="text-xs text-white/40 mb-1">Embouteillage (ex 0.18)</p>
+              <Input value={trafficRate} onChange={(e) => setTrafficRate(e.target.value)} className="bg-white/5 border-white/10" />
             </div>
           </div>
           <Button onClick={saveGrid}>Publier cette version</Button>

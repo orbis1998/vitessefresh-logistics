@@ -1,4 +1,4 @@
-const CACHE = "vita-shell-v2";
+const CACHE = "vita-shell-v3";
 const SHELL = [
   "/",
   "/auth/login",
@@ -6,6 +6,7 @@ const SHELL = [
   "/vita-logo.png",
   "/vita-mark.png",
   "/vita-mark-192.png",
+  "/favicon-32.png",
   "/manifest.webmanifest",
 ];
 

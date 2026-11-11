@@ -383,9 +383,41 @@
 
 .vita-sheet {
   width: min(360px, calc(100vw - 1.5rem));
+  max-height: min(58dvh, 520px);
+  transition: max-height 220ms ease;
 }
 .vita-sheet--wide {
   width: min(420px, calc(100vw - 1.5rem));
+}
+.vita-sheet.is-peek {
+  max-height: 210px;
+}
+.vita-sheet.is-open {
+  max-height: min(62dvh, 560px);
+  overflow: auto;
+}
+.vita-sheet__handle {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: -4px 0 10px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: inherit;
+}
+.vita-sheet__handle span {
+  width: 42px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+}
+@media (min-width: 1024px) {
+  .vita-sheet.is-peek {
+    max-height: none;
+  }
 }
 .vita-sheet__actions {
   margin-top: 14px;
