@@ -5,6 +5,7 @@ import {
   addVitaBuildings,
   applyVitaAtmosphere,
   bindMapToken,
+  canServeMapboxTiles,
   CARTO_DARK,
   ESRI_STREETS,
   isLngLat,
@@ -77,17 +78,22 @@ const MapView = ({
 
     let cancelled = false;
     let fellBack = 0;
+    let ignoreErrorsUntil = 0;
     const timers: number[] = [];
 
-    const start = () => {
+    const boot = async () => {
       if (cancelled || map.current) return;
       if (node.clientWidth < 2 || node.clientHeight < 2) {
-        timers.push(window.setTimeout(start, 120));
+        timers.push(window.setTimeout(() => {
+          void boot();
+        }, 120));
         return;
       }
 
       bindMapToken(token);
-      const preferMapbox = Boolean(token?.startsWith("pk."));
+      const preferMapbox = await canServeMapboxTiles(token);
+      if (cancelled || map.current) return;
+
       setIsVector(preferMapbox);
       const viewPitch = preferMapbox ? pitch : Math.min(pitch, 42);
       const viewBearing = preferMapbox ? bearing : Math.min(Math.abs(bearing), 12);
@@ -116,7 +122,7 @@ const MapView = ({
       const enhance = () => {
         kick();
         addVitaBuildings(instance);
-        applyVitaAtmosphere(instance, preferMapbox);
+        applyVitaAtmosphere(instance, fellBack === 0 && preferMapbox);
         setReady(true);
         setBootError(false);
       };
@@ -127,22 +133,30 @@ const MapView = ({
         applyVitaAtmosphere(instance, fellBack === 0 && preferMapbox);
       });
       instance.on("error", (event) => {
-        const message = String((event as { error?: { message?: string } }).error?.message || "");
+        if (Date.now() < ignoreErrorsUntil) return;
+        const err = (event as { error?: { message?: string; status?: number } }).error;
+        const message = String(err?.message || err?.status || "");
         const tileDenied = /403|401|forbidden|unauthorized|not authorized/i.test(message);
         if (fellBack >= 2) {
           setBootError(true);
           setReady(true);
           return;
         }
-        if (fellBack === 0 && (preferMapbox || tileDenied)) {
+        // Only leave Mapbox when tiles are denied; keep Carto/Esri stable.
+        if (fellBack === 0 && preferMapbox && tileDenied) {
           fellBack = 1;
           setIsVector(false);
+          ignoreErrorsUntil = Date.now() + 1500;
+          applyVitaAtmosphere(instance, false);
           instance.setStyle(CARTO_DARK);
           return;
         }
-        fellBack = 2;
-        setIsVector(false);
-        instance.setStyle(ESRI_STREETS);
+        if (fellBack === 1 && tileDenied) {
+          fellBack = 2;
+          setIsVector(false);
+          ignoreErrorsUntil = Date.now() + 1500;
+          instance.setStyle(ESRI_STREETS);
+        }
       });
       instance.on("click", async (e) => {
         const select = onSelectRef.current;
@@ -158,7 +172,7 @@ const MapView = ({
       (map.current as mapboxgl.Map & { __ro?: ResizeObserver }).__ro = ro;
     };
 
-    start();
+    void boot();
 
     return () => {
       cancelled = true;

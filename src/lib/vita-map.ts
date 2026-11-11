@@ -86,19 +86,38 @@ export function addVitaBuildings(map: mapboxgl.Map) {
   }
 }
 
+/** Light depth cue only — heavy fog made the prod map look fully black. */
 export function applyVitaAtmosphere(map: mapboxgl.Map, enabled = true) {
-  if (!enabled) return;
   try {
+    if (!enabled) {
+      // Clear any previous fog so streets stay visible.
+      (map as mapboxgl.Map & { setFog: (fog?: mapboxgl.Fog | null) => void }).setFog(null);
+      return;
+    }
     map.setFog({
-      color: "rgb(12, 13, 15)",
-      "high-color": "rgb(28, 32, 40)",
-      "horizon-blend": 0.08,
-      "space-color": "rgb(8, 9, 11)",
+      color: "rgb(18, 20, 24)",
+      "high-color": "rgb(36, 40, 48)",
+      "horizon-blend": 0.02,
+      "space-color": "rgb(10, 11, 13)",
       "star-intensity": 0,
-      range: [0.6, 12],
+      range: [1.8, 14],
     });
   } catch {
     /* style without fog support */
+  }
+}
+
+/** Browser probe: Mapbox URL allowlists often 403 without a matching Origin. */
+export async function canServeMapboxTiles(token?: string | null) {
+  if (!token?.startsWith("pk.")) return false;
+  try {
+    const r = await fetch(
+      `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/0/0/0.vector.pbf?access_token=${token}`,
+      { method: "GET", cache: "no-store" },
+    );
+    return r.ok;
+  } catch {
+    return false;
   }
 }
 

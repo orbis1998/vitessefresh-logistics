@@ -4,6 +4,7 @@ import {
   addVitaBuildings,
   applyVitaAtmosphere,
   bindMapToken,
+  canServeMapboxTiles,
   CARTO_DARK,
   ESRI_STREETS,
   isLngLat,
@@ -54,56 +55,74 @@ const OpsMap = ({
     const node = el.current;
     if (!node || mapRef.current) return;
 
+    let cancelled = false;
     let fellBack = 0;
-    bindMapToken(token);
-    const preferMapbox = Boolean(token?.startsWith("pk."));
-    vectorRef.current = preferMapbox;
-    const map = new mapboxgl.Map({
-      container: node,
-      style: preferMapbox ? MAPBOX_DARK : CARTO_DARK,
-      center: [15.3078, -4.3195],
-      zoom: 12.4,
-      pitch: preferMapbox ? pitch : Math.min(pitch, 42),
-      bearing: preferMapbox ? bearing : 0,
-      attributionControl: false,
-      antialias: true,
-      failIfMajorPerformanceCaveat: false,
-    });
-    map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), "top-right");
-    mapRef.current = map;
-    const kick = () => map.resize();
-    const enhance = () => {
-      kick();
-      addVitaBuildings(map);
-      applyVitaAtmosphere(map, preferMapbox && fellBack === 0);
+    let ignoreErrorsUntil = 0;
+    let timers: number[] = [];
+    let ro: ResizeObserver | null = null;
+
+    const boot = async () => {
+      bindMapToken(token);
+      const preferMapbox = await canServeMapboxTiles(token);
+      if (cancelled || mapRef.current || !node) return;
+      vectorRef.current = preferMapbox;
+      const map = new mapboxgl.Map({
+        container: node,
+        style: preferMapbox ? MAPBOX_DARK : CARTO_DARK,
+        center: [15.3078, -4.3195],
+        zoom: 12.4,
+        pitch: preferMapbox ? pitch : Math.min(pitch, 42),
+        bearing: preferMapbox ? bearing : 0,
+        attributionControl: false,
+        antialias: true,
+        failIfMajorPerformanceCaveat: false,
+      });
+      map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), "top-right");
+      mapRef.current = map;
+      const kick = () => map.resize();
+      const enhance = () => {
+        kick();
+        addVitaBuildings(map);
+        applyVitaAtmosphere(map, preferMapbox && fellBack === 0);
+      };
+      map.on("load", enhance);
+      map.on("style.load", () => {
+        addVitaBuildings(map);
+        applyVitaAtmosphere(map, preferMapbox && fellBack === 0);
+      });
+      map.on("error", (event) => {
+        if (Date.now() < ignoreErrorsUntil) return;
+        const err = (event as { error?: { message?: string; status?: number } }).error;
+        const message = String(err?.message || err?.status || "");
+        const tileDenied = /403|401|forbidden|unauthorized|not authorized/i.test(message);
+        if (fellBack === 0 && preferMapbox && tileDenied) {
+          fellBack = 1;
+          vectorRef.current = false;
+          ignoreErrorsUntil = Date.now() + 1500;
+          applyVitaAtmosphere(map, false);
+          map.setStyle(CARTO_DARK);
+          return;
+        }
+        if (fellBack === 1 && tileDenied) {
+          fellBack = 2;
+          vectorRef.current = false;
+          ignoreErrorsUntil = Date.now() + 1500;
+          map.setStyle(ESRI_STREETS);
+        }
+      });
+      ro = new ResizeObserver(kick);
+      ro.observe(node);
+      timers = [80, 250, 800].map((ms) => window.setTimeout(kick, ms));
     };
-    map.on("load", enhance);
-    map.on("style.load", () => {
-      addVitaBuildings(map);
-      applyVitaAtmosphere(map, preferMapbox && fellBack === 0);
-    });
-    map.on("error", () => {
-      if (fellBack === 0) {
-        fellBack = 1;
-        vectorRef.current = false;
-        map.setStyle(CARTO_DARK);
-        return;
-      }
-      if (fellBack === 1) {
-        fellBack = 2;
-        vectorRef.current = false;
-        map.setStyle(ESRI_STREETS);
-      }
-    });
-    const ro = new ResizeObserver(kick);
-    ro.observe(node);
-    const timers = [80, 250, 800].map((ms) => window.setTimeout(kick, ms));
+
+    void boot();
     return () => {
+      cancelled = true;
       timers.forEach(clearTimeout);
       if (dashTimer.current) window.clearInterval(dashTimer.current);
-      ro.disconnect();
+      ro?.disconnect();
       marks.current.forEach((m) => m.remove());
-      map.remove();
+      mapRef.current?.remove();
       mapRef.current = null;
     };
   }, [loading, token, pitch, bearing]);

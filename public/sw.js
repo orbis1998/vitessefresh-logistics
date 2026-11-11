@@ -1,4 +1,4 @@
-const CACHE = "vita-shell-v1";
+const CACHE = "vita-shell-v2";
 const SHELL = [
   "/",
   "/auth/login",
